@@ -213,7 +213,7 @@ with arcpy.da.SearchCursor(agol_items_table, ['TABLENAME', 'AGOL_PUBLISHED_NAME'
 
 print('published item ids:')
 for title, id in published_items:
-  print(f'title,id')
+  print(f'{title},{id}')
 print('items with missing thumbnails:')
 for id in missing_thumbnails:
   print(id)
