@@ -50,15 +50,6 @@ with open(metadata_file_path, 'r') as file:
   metadata_lookup = json.loads(file.read())
 
 
-scope = ['https://spreadsheets.google.com/feeds',
-         'https://www.googleapis.com/auth/drive']
-
-credentials = ServiceAccountCredentials.from_json_keyfile_name('deq-enviro-key.json', scope)
-gc = gspread.authorize(credentials)
-
-sheet = gc.open_by_key('1MBTwZg7pqpD9noFNAHU8d76EfXD3hMffmbjAHBtkoyQ').get_worksheet(0)
-
-
 def cleanup():
   print('cleaning up Temp map')
   for layer in temp_map.listLayers():
@@ -218,6 +209,14 @@ with arcpy.da.SearchCursor(agol_items_table, ['TABLENAME', 'AGOL_PUBLISHED_NAME'
         for row in update_cursor:
           update_cursor.updateRow((published_id,))
 
+    #: reauthorize gspread for each publish to make sure that the auth doesn't time out
+    scope = ['https://spreadsheets.google.com/feeds',
+            'https://www.googleapis.com/auth/drive']
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('deq-enviro-key.json', scope)
+    gc = gspread.authorize(credentials)
+
+    sheet = gc.open_by_key('1MBTwZg7pqpD9noFNAHU8d76EfXD3hMffmbjAHBtkoyQ').get_worksheet(0)
     sheet.append_row([item_name, published_id, f'https://utah.maps.arcgis.com/home/item.html?id={published_id}'])
 
 
