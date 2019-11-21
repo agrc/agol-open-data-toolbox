@@ -9,6 +9,7 @@ import arcpy
 import pydash
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from tqdm import tqdm
 
 owner = sys.argv[1]
 password = sys.argv[2]
@@ -180,7 +181,7 @@ query = 'AGOL_ITEM_ID IS NULL'
 
 missing_thumbnails = []
 with arcpy.da.SearchCursor(agol_items_table, ['TABLENAME', 'AGOL_PUBLISHED_NAME'], query, sql_clause=sql) as cursor:
-  for table, item_name in cursor:
+  for table, item_name in tqdm(cursor):
     sgid_table = join(sgid, table)
 
     try:
