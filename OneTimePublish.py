@@ -125,6 +125,9 @@ def publish_to_agol(share_layer, category, item_name, add_map):
   if len(metadata['accessInformation']) == 0:
     metadata['accessInformation'] = 'AGRC'
 
+  #: truncate snippet to 2048 chars (found issue in Parcels_Beaver_LIR)
+  metadata['snippet'] = metadata['snippet'][:2047]
+
   metadata.update({
     'tags': tags,
     'title': item_name
