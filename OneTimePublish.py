@@ -141,7 +141,7 @@ def publish_to_agol(share_layer, category, item_name, add_map):
   print('creating thumbnail')
   try:
     item.create_thumbnail()
-  except RuntimeError as e:
+  except Exception as e:
     print(e)
     print('retrying thumbnail')
     try:
