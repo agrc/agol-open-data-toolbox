@@ -8,30 +8,32 @@ import arcpy
 import pydash
 import sys
 
-current_directory = dirname(realpath(__file__))
+owner = sys.argv[1]
+password = sys.argv[2]
+share = sys.argv[3]
+
+current_folder = dirname(realpath(__file__))
 
 #: prod
-sgid_write = join(current_directory, 'internal.agrc.utah.gov as agrc-arcgis.sde')
-sgid = join(current_directory, 'internal.agrc.utah.gov as internal.sde')
-pro_project_path = join(current_directory, 'AGOL_Layers.aprx')
+sgid_write = join(share, 'internal.agrc.utah.gov as agrc-arcgis.sde')
+sgid = join(share, 'internal.agrc.utah.gov as internal.sde')
+pro_project_path = join(share, 'AGOL_Layers.aprx')
 
 #: test
-# sgid_write = join(current_directory, 'SGID_Local as META.sde')
-# sgid = join(current_directory, 'SGID_Local as META.sde')
-# pro_project_path = join(current_directory, 'AGOL_Layers_TEST.aprx')
+# sgid_write = join(share, 'SGID_Local as META.sde')
+# sgid = join(share, 'SGID_Local as META.sde')
+# pro_project_path = join(share, 'AGOL_Layers_TEST.aprx')
 
-terms_of_use_file_path = join(current_directory, 'termsOfUse.html')
+terms_of_use_file_path = join(share, 'termsOfUse.html')
 with open(terms_of_use_file_path) as file:
   generic_terms_of_use = file.read()
 agol_items_table = join(sgid_write, 'SGID.META.AGOLItems')
-fgdb_folder = current_directory
+fgdb_folder =share
 map_name = 'Publishing'
 transformation = 'NAD_1983_to_WGS_1984_5'
 drafts_folder = join(fgdb_folder, 'drafts')
-metadata_file_path = join(fgdb_folder, 'metadata.json')
+metadata_file_path = join(current_folder, 'metadata.json')
 
-owner = sys.argv[1]
-password = sys.argv[2]
 gis = arcgis.gis.GIS(username=owner, password=password)
 pro_project = arcpy.mp.ArcGISProject(pro_project_path)
 maps = {}
@@ -175,7 +177,7 @@ with arcpy.da.SearchCursor(agol_items_table, ['TABLENAME', 'AGOL_PUBLISHED_NAME'
     sgid_table = join(sgid, table)
 
     try:
-    describe = arcpy.da.Describe(sgid_table)
+      describe = arcpy.da.Describe(sgid_table)
     except:
       print(f'{sgid_table} does not exist!!!!!!!')
       continue
