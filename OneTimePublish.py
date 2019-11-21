@@ -2,11 +2,13 @@ from os.path import dirname, join, realpath
 from os import mkdir
 from shutil import rmtree
 import json
+import sys
 
 import arcgis
 import arcpy
 import pydash
-import sys
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 owner = sys.argv[1]
 password = sys.argv[2]
@@ -45,6 +47,15 @@ published_items = []
 metadata_lookup = None
 with open(metadata_file_path, 'r') as file:
   metadata_lookup = json.loads(file.read())
+
+
+scope = ['https://spreadsheets.google.com/feeds',
+         'https://www.googleapis.com/auth/drive']
+
+credentials = ServiceAccountCredentials.from_json_keyfile_name('deq-enviro-key.json', scope)
+gc = gspread.authorize(credentials)
+
+sheet = gc.open_by_key('1MBTwZg7pqpD9noFNAHU8d76EfXD3hMffmbjAHBtkoyQ').get_worksheet(0)
 
 
 def cleanup():
@@ -210,7 +221,7 @@ with arcpy.da.SearchCursor(agol_items_table, ['TABLENAME', 'AGOL_PUBLISHED_NAME'
         for row in update_cursor:
           update_cursor.updateRow((published_id,))
 
-    total_publishes = total_publishes + 1
+    sheet.append_row([item_name, published_id, f'https://utah.maps.arcgis.com/home/item.html?id={published_id}'])
 
 
 print('published item ids:')
