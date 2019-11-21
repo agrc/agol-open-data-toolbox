@@ -178,13 +178,9 @@ cleanup()
 sql = (None, 'ORDER BY TABLENAME')
 query = 'AGOL_ITEM_ID IS NULL'
 
-max_publishes = 10
-total_publishes = 0
 missing_thumbnails = []
 with arcpy.da.SearchCursor(agol_items_table, ['TABLENAME', 'AGOL_PUBLISHED_NAME'], query, sql_clause=sql) as cursor:
   for table, item_name in cursor:
-    if total_publishes >= max_publishes:
-      break
     sgid_table = join(sgid, table)
 
     try:
