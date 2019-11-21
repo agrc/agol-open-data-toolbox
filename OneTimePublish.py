@@ -173,7 +173,12 @@ with arcpy.da.SearchCursor(agol_items_table, ['TABLENAME', 'AGOL_PUBLISHED_NAME'
     if total_publishes >= max_publishes:
       break
     sgid_table = join(sgid, table)
+
+    try:
     describe = arcpy.da.Describe(sgid_table)
+    except:
+      print(f'{sgid_table} does not exist!!!!!!!')
+      continue
     is_table = describe['datasetType'] == 'Table'
 
     if is_table:
