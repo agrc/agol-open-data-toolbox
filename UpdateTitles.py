@@ -24,7 +24,7 @@ gis = arcgis.gis.GIS(username=sys.argv[1], password=sys.argv[2])
 agol_items_table = join(sys.argv[3], agol_items_table_name)
 
 errors = []
-query = 'AGOL_ITEM_ID IS NOT NULL AND AGOL_PUBLISHED_NAME IS NOT NULL'
+query = 'AGOL_ITEM_ID IS NOT NULL AND AGOL_ITEM_ID <> \'EXTERNAL\' AND AGOL_PUBLISHED_NAME IS NOT NULL'
 with arcpy.da.SearchCursor(agol_items_table, ['AGOL_ITEM_ID', 'AGOL_PUBLISHED_NAME'], query) as cursor:
   for item_id, name in cursor:
     try:
