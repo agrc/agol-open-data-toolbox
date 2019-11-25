@@ -114,10 +114,12 @@ def publish_to_agol(share_layer, category, item_name, add_map):
   print('uploading')
   source_item = gis.content.add({}, data=sd_path)
   source_item.protect()
+  source_item.move(category_tag)
 
   print('publishing feature service')
   item = source_item.publish()
   item.protect()
+  item.move(category_tag)
   published_items.append((item_name, item.id))
 
   print('updating feature service item properties')
