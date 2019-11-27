@@ -1,0 +1,26 @@
+{
+  "python.pythonPath": "/usr/local/Caskroom/miniconda/base/envs/update-links/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
+  "python.linting.flake8Enabled": false,
+  "python.linting.pycodestyleEnabled": false,
+  "python.formatting.provider": "yapf",
+  "python.formatting.yapfPath": "yapf",
+  "python.formatting.yapfArgs": [
+    "--style",
+    "${workspaceRoot}/stewardship-endpoint-linker/setup.cfg"
+  ],
+  "cSpell.words": [
+    "agol",
+    "dotenv",
+    "getenv",
+    "iterrows",
+    "o",
+    "odbc",
+    "pydash",
+    "pygsheets",
+    "pyodbc",
+    "returnas",
+    "tqdm"
+  ]
+}
