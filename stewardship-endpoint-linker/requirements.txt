@@ -1,0 +1,4 @@
+pygsheets
+pyodbc
+pandas
+pydotenv
