@@ -7,6 +7,8 @@ import datetime
 import csv
 import tempfile
 import shutil
+import json
+import pprint
 
 
 def project_data(sgid_table, fgdb_folder, fgdb, is_table):
@@ -179,14 +181,12 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
         del proj
         del sharing_draft
 
-        input()
-
         #: Delete feature class
-        print(f'Deleting {projected_table}...')
-        arcpy.Delete_management(projected_table)
-        tempgdb = os.path.join(temp_dir, 'tempfgdb.gdb')
-        print(f'Deleting {tempgdb}...')
-        shutil.rmtree(tempgdb)
+        # print(f'Deleting {projected_table}...')
+        # arcpy.Delete_management(projected_table)
+        # tempgdb = os.path.join(temp_dir, 'tempfgdb.gdb')
+        # print(f'Deleting {tempgdb}...')
+        # shutil.rmtree(tempgdb)
 
     # return t
     return sd_path
@@ -217,6 +217,15 @@ gis = arcgis.gis.GIS('https://www.arcgis.com', agol_user, getpass.getpass(prompt
 # test = layers[:3]
 test = [[test_fc_name, 'Bandtailed Pigeon Habitat', 'DWR', 'shelved']]
 
+#: Get metadata for whole SDE, terms of use
+metadata_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'metadata2.json')
+metadata_lookup = None
+with open(metadata_file_path, 'r') as meta_file:
+    metadata_lookup = json.loads(meta_file.read())
+
+with open(terms_of_use_path) as terms_file:
+    generic_terms_of_use = terms_file.read()
+
 for entry in test:
     print('\n Starting {}'.format(entry[0]))
 
@@ -234,29 +243,29 @@ for entry in test:
 
     #: TODO: get metadata from either original data or metadata.json
     
-    metadata_file_path = join(dirname(realpath(__file__)), 'metadata.json')
-    metadata_lookup = None
-    with open(metadata_file_path, 'r') as meta_file:
-        metadata_lookup = json.loads(meta_file.read())
+    #: Get metadata for this specific featureclass
+    metadata = metadata_lookup[entry[0].split('.')[-1]]
 
-    with open(terms_of_use_path) as terms_file:
-        generic_terms_of_use = terms_file.read()
+    #: Get tags, ensuring AGRC and SGID are in the list
+    base_tags = ['AGRC', 'SGID']
+    if metadata['tags']:
+        tags = metadata['tags'].split(',')
+        for tag in base_tags:
+            if tag not in tags:
+                tags.append(tag)
+    else:
+        tags = base_tags
 
-    metadata = metadata_lookup[entry[0]]
-
-
-    tags = ['AGRC', 'SGID']
-    description = 'This is a prebaked description.'
-
-
-    #: shelved: move to AGRC_Shelved folder, share with 'AGRC Shelf' group,
-    #:          add shelved tag, add disclaimer to description
-    #: static: put in ISO category folder, share with ISO category group,
-    #:         add static tag, add disclaimer to description
+    description = metadata['description']
 
     shelved_disclaimer = '<i><b>NOTE</b>: This dataset is an older dataset that we have removed from the SGID and \'shelved\' in ArcGIS Online. There may be a newer vintage of this dataset in the SGID.</i>'
 
     static_disclaimer = '<i><b>NOTE</b>: This dataset holds \'static\' data that we don\'t expect to change. We have removed it from the SDE database and placed it in ArcGIS Online, but it is still considered part of the SGID and shared on opendata.gis.utah.gov.</i>'
+
+    if metadata['licenseInfo']:
+        terms = metadata['licenseInfo']
+    else:
+        terms = generic_terms_of_use
 
     if entry[3] == 'shelved':
         group = 'AGRC Shelf'
@@ -273,16 +282,18 @@ for entry in test:
 
     item_info = {
         'name': entry[1],
-        'summary': 'FIX ME',
+        'summary': metadata['snippet'][:2047],  #: truncate long snippets
         'groups': [group],
         'tags': ', '.join(tags),
         'description': description,
-        'terms_of_use': 'AND ME!',
+        'terms_of_use': terms,
         'credits': credit,
         'folder': folder
     }
 
-    # item_id = upload_layer(gis, sd_path, item_info, protect=False)
+    pprint.pprint(item_info)
+
+    item_id = upload_layer(gis, sd_path, item_info, protect=False)
 
     #: Delete files from the scratch folder
     # sddraft = sd_path + 'draft'
