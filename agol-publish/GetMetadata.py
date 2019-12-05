@@ -20,6 +20,7 @@ def record_metadata(name, metadata):
     'description': metadata.abstract,
     'accessInformation': metadata.credits, #: "Credits (Attribution)"
     'licenseInfo': metadata.limitation #: terms of use
+    'tags': ','.join(metadata.tags) #: comma-separated sequence of tags
   }
 
 print('listing feature classes & tables')
