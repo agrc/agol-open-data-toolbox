@@ -191,12 +191,13 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
     # return t
     return sd_path
 
-
+#: TODO: get info from config file instead of hardcoding
 sde_path = r'C:\gis\Projects\Data\sgid.agrc.utah.gov.sde'
 project_path = r'c:\gis\projects\data\data.aprx'
 map_name = 'AGOL Upload'
 test_fc_name = r'SGID10.BIOSCIENCE.Habitat_BandtailedPigeon'
 list_csv = r'c:\temp\shelved.csv'
+terms_of_use_path = r'l:\sgid_to_agol\termsOfUse.html'
 
 temp_dir = tempfile.TemporaryDirectory(prefix='shelved_')
 # arcpy.env.scratchWorkspace = temp_dir.name
@@ -232,6 +233,18 @@ for entry in test:
     credit = entry[2] if entry[2] else 'AGRC'
 
     #: TODO: get metadata from either original data or metadata.json
+    
+    metadata_file_path = join(dirname(realpath(__file__)), 'metadata.json')
+    metadata_lookup = None
+    with open(metadata_file_path, 'r') as meta_file:
+        metadata_lookup = json.loads(meta_file.read())
+
+    with open(terms_of_use_path) as terms_file:
+        generic_terms_of_use = terms_file.read()
+
+    metadata = metadata_lookup[entry[0]]
+
+
     tags = ['AGRC', 'SGID']
     description = 'This is a prebaked description.'
 
