@@ -9,6 +9,8 @@ import tempfile
 import shutil
 import json
 import pprint
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 def project_data(sgid_table, fgdb_folder, fgdb, is_table):
@@ -191,6 +193,27 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
     # return t
     return sd_path
 
+#: TODO: finish this method
+def document_action(action_info):
+    '''
+    Documents actions to stewardship doc, local csv, and AGOLItems metatable
+    '''
+
+
+    #: reauthorize gspread for each publish to make sure that the auth doesn't time out
+    scope = ['https://spreadsheets.google.com/feeds',
+            'https://www.googleapis.com/auth/drive']
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('deq-enviro-key.json', scope)
+    gc = gspread.authorize(credentials)
+
+    sheet = gc.open_by_key('1MBTwZg7pqpD9noFNAHU8d76EfXD3hMffmbjAHBtkoyQ').get_worksheet(0)
+    sheet.append_row([item_name, published_id, f'https://utah.maps.arcgis.com/home/item.html?id={published_id}'])
+
+
+#: TODO: Generalized tag checker method
+
+
 #: TODO: get info from config file instead of hardcoding
 sde_path = r'C:\gis\Projects\Data\sgid.agrc.utah.gov.sde'
 project_path = r'c:\gis\projects\data\data.aprx'
@@ -226,6 +249,8 @@ with open(metadata_file_path, 'r') as meta_file:
 with open(terms_of_use_path) as terms_file:
     generic_terms_of_use = terms_file.read()
 
+log = []
+
 for entry in test:
     print('\n Starting {}'.format(entry[0]))
 
@@ -240,8 +265,6 @@ for entry in test:
 
     category = entry[0].split('.')[-2].title()
     credit = entry[2] if entry[2] else 'AGRC'
-
-    #: TODO: get metadata from either original data or metadata.json
     
     #: Get metadata for this specific featureclass
     metadata = metadata_lookup[entry[0].split('.')[-1]]
@@ -294,6 +317,16 @@ for entry in test:
     pprint.pprint(item_info)
 
     item_id = upload_layer(gis, sd_path, item_info, protect=False)
+
+    describe = arcpy.da.Describe(os.path.join(sde_path, test[0]))
+    shape = describe['shapeType'].lower()
+    dash_name = entry[1].replace(' ', '-').lower
+    endpoint = f'https://opendata.gis.utah.gov/datasets/{dash_name}'
+    data_layer = entry[0].partition('.')[2]  #: layername for stewardship doc
+
+    #: Log: AGOL title, SGID name for stewardship doc, description, source/credit, shape type, endpoint, AGOL item ID, operation
+    log_entry = [entry[1], data_layer, description, credit, shape, endpoint, item_id, entry[3]]
+    log.append(log_entry)
 
     #: Delete files from the scratch folder
     # sddraft = sd_path + 'draft'
