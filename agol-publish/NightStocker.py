@@ -219,7 +219,7 @@ def log_action(action_info, method, log_path=None):
     if 'csv' in method:
         if not log_path:
             raise IOError('Logfile not specified')
-        with open(log_path, 'a') as logfile:
+        with open(log_path, 'a', newline='\n') as logfile:
             log_writer = csv.writer(logfile)
             log_writer.writerow(action_info)
 
