@@ -93,7 +93,7 @@ def upload_layer(gis, service_definition, info, protect=True):
 
 
 def create_service_definition(layer_info, sde_path, temp_dir, project_path, 
-                              map_name):
+                              map_name, describe):
     '''
     Creates a service defintion for a layer to be uploaded to AGOL from an SDE
     using an existing ArcGIS Pro project
@@ -106,6 +106,7 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
     temp_dir: Directory for holding reprojected fgdb and .sddraft & .sd files
     project_path: Path to an existing ArcGIS Pro project
     map_name: Name of the map in the Pro project to use
+    describe: results of arcpy.da.Describe() on feature class
 
     returns: path to the .sd file
     '''
@@ -114,7 +115,7 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
         start = datetime.datetime.now()
 
         sgid_table = os.path.join(sde_path, layer_info['fc_name'])
-        describe = arcpy.da.Describe(sgid_table)
+        # describe = arcpy.da.Describe(sgid_table)
         is_table = describe['datasetType'] == 'Table'
 
         projected_table = project_data(sgid_table, temp_dir, 'tempfgdb.gdb', is_table)
@@ -258,6 +259,8 @@ def get_info(entry, generic_terms_of_use):
 
 
 #: TODO: finish this method
+#: TODO add AGOL link to stewardship doc after item is shelved/staticed?
+#: TODO create log of updates, either directly to stewardship or as csv
 def log_action(action_info, method, log_path=None):
     '''
     Documents actions to stewardship doc, local csv, and AGOLItems metatable
@@ -301,8 +304,8 @@ temp_dir = tempfile.TemporaryDirectory(prefix='shelved_')
 # arcpy.env.scratchWorkspace = temp_dir.name
 
 #: Connect to AGOL
-agol_user = sys.argv[1]
-gis = arcgis.gis.GIS('https://www.arcgis.com', agol_user, getpass.getpass(prompt='{}\'s password: '.format(agol_user)))
+# agol_user = sys.argv[1]
+# gis = arcgis.gis.GIS('https://www.arcgis.com', agol_user, getpass.getpass(prompt='{}\'s password: '.format(agol_user)))
 
 layers = []
 with open(list_csv) as list_file:
@@ -349,7 +352,7 @@ for entry in test:
         print('creating sd')
         sd_path = create_service_definition(layer_info, sde_path, 
                                             temp_dir.name, project_path, 
-                                            map_name)
+                                            map_name, describe)
 
         item_info = get_info(entry, generic_terms_of_use)
 
@@ -377,6 +380,6 @@ for entry in test:
         message = arcpy.GetMessages()
         print(message)
         log_action([entry[1], message.replace(',', ';')], 'csv', log_path)
-    #: TODO create log of updates, either directly to stewardship or as csv
 
-    #: TODO add AGOL link to stewardship doc after item is shelved/staticed?
+
+
