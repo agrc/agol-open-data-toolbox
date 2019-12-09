@@ -274,6 +274,16 @@ for entry in test:
         'title':entry[1]
     }
 
+    describe = arcpy.da.Describe(os.path.join(sde_path, entry[0]))
+    is_table = describe['datasetType'] == 'Table'
+    if is_table:
+        #: Log: AGOL title, operation, SGID name for stewardship doc, description, source/credit, shape type, endpoint, AGOL item ID
+        log_entry = [entry[1], 'Table: not uploaded']
+        log.append(log_entry)
+        log_action(log_entry, ['csv'], log_path)
+
+        continue
+
     try:
         sd_path = create_service_definition(layer_info, sde_path, 
                                             temp_dir.name, project_path, 
@@ -336,7 +346,6 @@ for entry in test:
         # item_id = upload_layer(gis, sd_path, item_info, protect=False)
         item_id = 'testing'
 
-        describe = arcpy.da.Describe(os.path.join(sde_path, entry[0]))
         shape = describe['shapeType'].lower()
         dash_name = entry[1].replace(' ', '-').lower
         endpoint = f'https://opendata.gis.utah.gov/datasets/{dash_name}'
