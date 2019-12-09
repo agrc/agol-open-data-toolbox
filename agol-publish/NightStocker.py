@@ -8,9 +8,9 @@ import csv
 import tempfile
 import shutil
 import json
-import pprint
 # import gspread
 # from oauth2client.service_account import ServiceAccountCredentials
+import settings as s
 
 
 def project_data(sgid_table, fgdb_folder, fgdb, is_table):
@@ -239,6 +239,7 @@ def get_info(entry, generic_terms_of_use):
     elif entry[3] == 'static':
         group = f'Utah SGID {category}'
         tags.append('static')
+        tags.append(category)
         folder = f'Utah SGID {category}'
         description = f'{static_disclaimer} <p> </p> <p>{description}</p>'
     else:
@@ -287,18 +288,23 @@ def log_action(action_info, method, log_path=None):
             log_writer.writerow(action_info)
 
 
-
-#: TODO: Generalized tag checker method
-
-
 #: TODO: get info from config file instead of hardcoding
-sde_path = r'C:\gis\Projects\Data\sgid.agrc.utah.gov.sde'
-project_path = r'c:\gis\projects\data\data.aprx'
-map_name = 'AGOL Upload'
+# sde_path = r'C:\gis\Projects\Data\sgid.agrc.utah.gov.sde'
+# project_path = r'c:\gis\projects\data\data.aprx'
+# map_name = 'AGOL Upload'
+# test_fc_name = r'SGID10.BIOSCIENCE.Habitat_BandtailedPigeon'
+# list_csv = r'c:\temp\shelved.csv'
+# terms_of_use_path = r'l:\sgid_to_agol\termsOfUse.html'
+# log_path = r'c:\temp\shelved_log.csv'
+
+sde_path = s.SDE_PATH
+project_path = s.PROJECT_PATH
+map_name = s.MAP_NAME
 test_fc_name = r'SGID10.BIOSCIENCE.Habitat_BandtailedPigeon'
-list_csv = r'c:\temp\shelved.csv'
-terms_of_use_path = r'l:\sgid_to_agol\termsOfUse.html'
-log_path = r'c:\temp\shelved_log.csv'
+list_csv = s.LIST_CSV
+terms_of_use_path = s.TERMS_OF_USE_PATH
+log_path = s.LOG_PATH
+
 
 temp_dir = tempfile.TemporaryDirectory(prefix='shelved_')
 # arcpy.env.scratchWorkspace = temp_dir.name
@@ -315,7 +321,7 @@ with open(list_csv) as list_file:
         if row[3] != 'removed': #: Just don't even add removed items to the list
             layers.append(row)
 
-test = layers
+test = layers[10:13]
 # test = [[test_fc_name, 'Bandtailed Pigeon Habitat', 'DWR', 'shelved']]
 
 #: Get metadata for whole SDE, terms of use
@@ -356,14 +362,11 @@ for entry in test:
 
         item_info = get_info(entry, generic_terms_of_use)
 
-
-        # pprint.pprint(item_info)
-
         # item_id = upload_layer(gis, sd_path, item_info, protect=False)
         item_id = 'testing'
 
         shape = describe['shapeType'].lower()
-        dash_name = entry[1].replace(' ', '-').lower
+        dash_name = entry[1].replace(' ', '-').lower()
         endpoint = f'https://opendata.gis.utah.gov/datasets/{dash_name}'
         data_layer = entry[0].partition('.')[2]  #: layername for stewardship doc
 
