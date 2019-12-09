@@ -197,6 +197,66 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
     # return t
     return sd_path
 
+
+def get_info(entry, generic_terms_of_use):
+    '''
+    Gets the info needed for publishing AGOL item.
+    entry:  list from CSV: [fully-qualifed FC name, fc title, credit, method]
+    '''
+    category = entry[0].split('.')[-2].title()
+    credit = entry[2] if entry[2] else 'AGRC'
+    
+    #: Get metadata for this specific featureclass
+    metadata = metadata_lookup[entry[0].split('.')[-1]]
+
+    #: Get tags, ensuring AGRC and SGID are in the list
+    base_tags = ['AGRC', 'SGID']
+    if metadata['tags']:
+        tags = metadata['tags'].split(',')
+        for tag in base_tags:
+            if tag not in tags:
+                tags.append(tag)
+    else:
+        tags = base_tags
+
+    description = metadata['description']
+
+    shelved_disclaimer = '<i><b>NOTE</b>: This dataset is an older dataset that we have removed from the SGID and \'shelved\' in ArcGIS Online. There may be a newer vintage of this dataset in the SGID.</i>'
+
+    static_disclaimer = '<i><b>NOTE</b>: This dataset holds \'static\' data that we don\'t expect to change. We have removed it from the SDE database and placed it in ArcGIS Online, but it is still considered part of the SGID and shared on opendata.gis.utah.gov.</i>'
+
+    if metadata['licenseInfo']:
+        terms = metadata['licenseInfo']
+    else:
+        terms = generic_terms_of_use
+
+    if entry[3] == 'shelved':
+        group = 'AGRC Shelf'
+        tags.append('shelved')
+        folder = 'AGRC_Shelved'
+        description = f'{shelved_disclaimer} <p> </p> <p>{description}</p>'
+    elif entry[3] == 'static':
+        group = f'Utah SGID {category}'
+        tags.append('static')
+        folder = f'Utah SGID {category}'
+        description = f'{static_disclaimer} <p> </p> <p>{description}</p>'
+    else:
+        raise ValueError(f'Unknown shelving category: {entry[3]}')
+
+    item_info = {
+        'name': entry[1],
+        'summary': metadata['snippet'][:2047],  #: truncate long snippets
+        'groups': [group],
+        'tags': ', '.join(tags),
+        'description': description,
+        'terms_of_use': terms,
+        'credits': credit,
+        'folder': folder
+    }
+
+    return item_info
+
+
 #: TODO: finish this method
 def log_action(action_info, method, log_path=None):
     '''
@@ -274,6 +334,7 @@ for entry in test:
         'title':entry[1]
     }
 
+    print('describing')
     describe = arcpy.da.Describe(os.path.join(sde_path, entry[0]))
     is_table = describe['datasetType'] == 'Table'
     if is_table:
@@ -285,61 +346,13 @@ for entry in test:
         continue
 
     try:
+        print('creating sd')
         sd_path = create_service_definition(layer_info, sde_path, 
                                             temp_dir.name, project_path, 
                                             map_name)
 
+        item_info = get_info(entry, generic_terms_of_use)
 
-        category = entry[0].split('.')[-2].title()
-        credit = entry[2] if entry[2] else 'AGRC'
-        
-        #: Get metadata for this specific featureclass
-        metadata = metadata_lookup[entry[0].split('.')[-1]]
-
-        #: Get tags, ensuring AGRC and SGID are in the list
-        base_tags = ['AGRC', 'SGID']
-        if metadata['tags']:
-            tags = metadata['tags'].split(',')
-            for tag in base_tags:
-                if tag not in tags:
-                    tags.append(tag)
-        else:
-            tags = base_tags
-
-        description = metadata['description']
-
-        shelved_disclaimer = '<i><b>NOTE</b>: This dataset is an older dataset that we have removed from the SGID and \'shelved\' in ArcGIS Online. There may be a newer vintage of this dataset in the SGID.</i>'
-
-        static_disclaimer = '<i><b>NOTE</b>: This dataset holds \'static\' data that we don\'t expect to change. We have removed it from the SDE database and placed it in ArcGIS Online, but it is still considered part of the SGID and shared on opendata.gis.utah.gov.</i>'
-
-        if metadata['licenseInfo']:
-            terms = metadata['licenseInfo']
-        else:
-            terms = generic_terms_of_use
-
-        if entry[3] == 'shelved':
-            group = 'AGRC Shelf'
-            tags.append('shelved')
-            folder = 'AGRC_Shelved'
-            description = f'{shelved_disclaimer} <p> </p> <p>{description}</p>'
-        elif entry[3] == 'static':
-            group = f'Utah SGID {category}'
-            tags.append('static')
-            folder = f'Utah SGID {category}'
-            description = f'{static_disclaimer} <p> </p> <p>{description}</p>'
-        else:
-            raise ValueError(f'Unknown shelving category: {entry[3]}')
-
-        item_info = {
-            'name': entry[1],
-            'summary': metadata['snippet'][:2047],  #: truncate long snippets
-            'groups': [group],
-            'tags': ', '.join(tags),
-            'description': description,
-            'terms_of_use': terms,
-            'credits': credit,
-            'folder': folder
-        }
 
         # pprint.pprint(item_info)
 
@@ -352,7 +365,7 @@ for entry in test:
         data_layer = entry[0].partition('.')[2]  #: layername for stewardship doc
 
         #: Log: AGOL title, operation, SGID name for stewardship doc, description, source/credit, shape type, endpoint, AGOL item ID
-        log_entry = [entry[1], entry[3], data_layer, description, credit, shape, endpoint, item_id]
+        log_entry = [entry[1], entry[3], data_layer, item_info['description'], item_info['credits'], shape, endpoint, item_id]
         log.append(log_entry)
         log_action(log_entry, ['csv'], log_path)
 
