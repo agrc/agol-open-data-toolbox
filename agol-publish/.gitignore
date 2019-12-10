@@ -104,3 +104,4 @@ venv.bak/
 .mypy_cache/
 
 deq-enviro-key.json
+client_secrets.json
