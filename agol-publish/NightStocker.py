@@ -8,8 +8,8 @@ import csv
 import tempfile
 import shutil
 import json
-# import gspread
-# from oauth2client.service_account import ServiceAccountCredentials
+import pygsheets
+import pprint
 import settings as s
 
 
@@ -262,40 +262,68 @@ def get_info(entry, generic_terms_of_use):
 #: TODO: finish this method
 #: TODO add AGOL link to stewardship doc after item is shelved/staticed?
 #: TODO create log of updates, either directly to stewardship or as csv
-def log_action(action_info, method, log_path=None):
+def log_action(action_info, method, log_path=None, gsheet_auth=None, gsheet_keys=None):
     '''
     Documents actions to stewardship doc, local csv, and AGOLItems metatable
     action_info:    a list of info relevant to a single feature class
     method:         a list of methods (gdoc, csv, or metatable)
+    log_path:       path for csv log
+    gsheet_auth:    path to Google sheets authorization file
+    gsheet_keys:    Tuple of keys to stewardship doc [0] and agol items doc [1]
     '''
 
+    updated_row = None
+
     if 'gdoc' in method:
-        pass
-        # #: reauthorize gspread for each publish to make sure that the auth doesn't time out
-        # scope = ['https://spreadsheets.google.com/feeds',
-        #         'https://www.googleapis.com/auth/drive']
+        client = pygsheets.authorize(service_file=gsheet_auth)
 
-        # credentials = ServiceAccountCredentials.from_json_keyfile_name('deq-enviro-key.json', scope)
-        # gc = gspread.authorize(credentials)
+        #: Update stewardship doc
+        sheet = client.open_by_key(gsheet_keys[0])
+        worksheet = sheet[1]  #: Stewardship sheet is second tab
 
-        # sheet = gc.open_by_key('1MBTwZg7pqpD9noFNAHU8d76EfXD3hMffmbjAHBtkoyQ').get_worksheet(0)
-        # sheet.append_row([item_name, published_id, f'https://utah.maps.arcgis.com/home/item.html?id={published_id}'])
+        #: Get all rows so we can work locally before update_values()
+        rows = []
+        for row in worksheet:
+            rows.append(row)
+        #: Row Structure:
+        #: [0 Issue, 1 Authoritative Access From, 2 SGID Data Layer, 3 Refresh Cycle (Days), 4 Last Update, 5 Days From Last Refresh, 6 Days to Refresh, 7 Description, 8 Data Source, 9 Use Restrictions, 10 Website URL, 11 Data Type, 12 PEL Layer, 13 PEL Status, 14 Governance/Agreement, 15 PEL Inclusion, 16 Agency Contact Name, 17 Agency Contact Email, 18 SGID Coordination, 19 Archival Schedule, 20 Endpoint, 21 Tier, 22 Webapp, 23 Notes, 24 Deprecated]
+
+        #: Action info:
+        #: [0 AGOL title, 1 operation, 2 SGID name for stewardship doc, 3 description, 4 source/credit, 5 shape type, 6 endpoint, 7 AGOL item ID]
+
+        updated = False
+
+        for i, row in enumerate(rows):
+            if row[2] == action_info[2]:
+                temp_row = row
+                temp_row[1] = 'AGRC AGOL'
+                temp_row[20] = action_info[6]
+                temp_row[23] = f'AGOL category: {action_info[1]} - ' + row[23]
+                rownum = i+1
+                start = f'A{rownum}'
+                worksheet.update_values(start, [temp_row])
+                updated = True
+                updated_row = rownum
+
+        if not updated:
+            print(f'{action_info[2]} not found in stewardship doc')
+
+        #: Update list of new additions to AGOL
+        sheet = client.open_by_key(gsheet_keys[1])
+        worksheet = sheet[0]
+        row = [action_info[0], action_info[7], f'https://utah.maps.arcgis.com/home/item.html/?id={action_info[7]}']
+        worksheet.append_table(row)
+            
+
     if 'csv' in method:
-        if not log_path:
-            raise IOError('Logfile not specified')
-        with open(log_path, 'a', newline='\n') as logfile:
-            log_writer = csv.writer(logfile)
-            log_writer.writerow(action_info)
+        try:
+            with open(log_path, 'a', newline='\n') as logfile:
+                log_writer = csv.writer(logfile)
+                log_writer.writerow(action_info)
+        except IOError:
+            print('Log file cannot be written')
 
-
-#: TODO: get info from config file instead of hardcoding
-# sde_path = r'C:\gis\Projects\Data\sgid.agrc.utah.gov.sde'
-# project_path = r'c:\gis\projects\data\data.aprx'
-# map_name = 'AGOL Upload'
-# test_fc_name = r'SGID10.BIOSCIENCE.Habitat_BandtailedPigeon'
-# list_csv = r'c:\temp\shelved.csv'
-# terms_of_use_path = r'l:\sgid_to_agol\termsOfUse.html'
-# log_path = r'c:\temp\shelved_log.csv'
+    return updated_row
 
 sde_path = s.SDE_PATH
 project_path = s.PROJECT_PATH
@@ -304,6 +332,9 @@ test_fc_name = r'SGID10.BIOSCIENCE.Habitat_BandtailedPigeon'
 list_csv = s.LIST_CSV
 terms_of_use_path = s.TERMS_OF_USE_PATH
 log_path = s.LOG_PATH
+gsheet_auth = s.GSHEET_AUTH
+stewardship_sheet_key = s.STEWARDSHIP_SHEET_KEY
+agol_sheet_key = s.AGOL_SHEET_KEY
 
 
 temp_dir = tempfile.TemporaryDirectory(prefix='shelved_')
@@ -321,7 +352,7 @@ with open(list_csv) as list_file:
         if row[3] != 'removed': #: Just don't even add removed items to the list
             layers.append(row)
 
-test = layers[10:13]
+test = layers
 # test = [[test_fc_name, 'Bandtailed Pigeon Habitat', 'DWR', 'shelved']]
 
 #: Get metadata for whole SDE, terms of use
@@ -334,6 +365,7 @@ with open(terms_of_use_path) as terms_file:
     generic_terms_of_use = terms_file.read()
 
 log = []
+updated_rows = {}
 
 for entry in test:
     print('\n Starting {}'.format(entry[0]))
@@ -373,7 +405,8 @@ for entry in test:
         #: Log: AGOL title, operation, SGID name for stewardship doc, description, source/credit, shape type, endpoint, AGOL item ID
         log_entry = [entry[1], entry[3], data_layer, item_info['description'], item_info['credits'], shape, endpoint, item_id]
         log.append(log_entry)
-        log_action(log_entry, ['csv'], log_path)
+        updated_rows[entry[0]]= log_action(log_entry, ['csv', 'gdoc'], log_path, gsheet_auth, (stewardship_sheet_key, agol_sheet_key))
+        
 
         #: Delete files from the scratch folder
         # sddraft = sd_path + 'draft'
@@ -384,5 +417,6 @@ for entry in test:
         print(message)
         log_action([entry[1], message.replace(',', ';')], 'csv', log_path)
 
+pprint.pprint(updated_rows)
 
 
