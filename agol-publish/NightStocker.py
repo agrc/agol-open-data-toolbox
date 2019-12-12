@@ -259,71 +259,74 @@ def get_info(entry, generic_terms_of_use):
     return item_info
 
 
-#: TODO: finish this method
-#: TODO add AGOL link to stewardship doc after item is shelved/staticed?
-#: TODO create log of updates, either directly to stewardship or as csv
-def log_action(action_info, method, log_path=None, gsheet_auth=None, gsheet_keys=None):
+def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
     '''
-    Documents actions to stewardship doc, local csv, and AGOLItems metatable
+    Documents actions to stewardship doc
     action_info:    a list of info relevant to a single feature class
-    method:         a list of methods (gdoc, csv, or metatable)
-    log_path:       path for csv log
     gsheet_auth:    path to Google sheets authorization file
     gsheet_keys:    Tuple of keys to stewardship doc [0] and agol items doc [1]
     '''
 
     updated_row = None
 
-    if 'gdoc' in method:
-        client = pygsheets.authorize(service_file=gsheet_auth)
+    client = pygsheets.authorize(service_file=gsheet_auth)
 
-        #: Update stewardship doc
-        sheet = client.open_by_key(gsheet_keys[0])
-        worksheet = sheet[1]  #: Stewardship sheet is second tab
+    #: Update stewardship doc
+    sheet = client.open_by_key(gsheet_keys[0])
+    worksheet = sheet[1]  #: Stewardship sheet is second tab
 
-        #: Get all rows so we can work locally before update_values()
-        rows = []
-        for row in worksheet:
-            rows.append(row)
-        #: Row Structure:
-        #: [0 Issue, 1 Authoritative Access From, 2 SGID Data Layer, 3 Refresh Cycle (Days), 4 Last Update, 5 Days From Last Refresh, 6 Days to Refresh, 7 Description, 8 Data Source, 9 Use Restrictions, 10 Website URL, 11 Data Type, 12 PEL Layer, 13 PEL Status, 14 Governance/Agreement, 15 PEL Inclusion, 16 Agency Contact Name, 17 Agency Contact Email, 18 SGID Coordination, 19 Archival Schedule, 20 Endpoint, 21 Tier, 22 Webapp, 23 Notes, 24 Deprecated]
+    #: Get all rows so we can work locally before update_values()
+    rows = []
+    for row in worksheet:
+        rows.append(row)
+    #: Row Structure:
+    #: [0 Issue, 1 Authoritative Access From, 2 SGID Data Layer, 3 Refresh Cycle (Days), 4 Last Update, 5 Days From Last Refresh, 6 Days to Refresh, 7 Description, 8 Data Source, 9 Use Restrictions, 10 Website URL, 11 Data Type, 12 PEL Layer, 13 PEL Status, 14 Governance/Agreement, 15 PEL Inclusion, 16 Agency Contact Name, 17 Agency Contact Email, 18 SGID Coordination, 19 Archival Schedule, 20 Endpoint, 21 Tier, 22 Webapp, 23 Notes, 24 Deprecated]
 
-        #: Action info:
-        #: [0 AGOL title, 1 operation, 2 SGID name for stewardship doc, 3 description, 4 source/credit, 5 shape type, 6 endpoint, 7 AGOL item ID]
+    #: Action info:
+    #: [0 AGOL title, 1 operation, 2 SGID name for stewardship doc, 3 description, 4 source/credit, 5 shape type, 6 endpoint, 7 AGOL item ID]
 
-        updated = False
+    updated = False
 
-        for i, row in enumerate(rows):
-            if row[2] == action_info[2]:
-                temp_row = row
-                temp_row[1] = 'AGRC AGOL'
-                temp_row[20] = action_info[6]
-                temp_row[23] = f'AGOL category: {action_info[1]} - ' + row[23]
-                rownum = i+1
-                start = f'A{rownum}'
-                worksheet.update_values(start, [temp_row])
-                updated = True
-                updated_row = rownum
+    for i, row in enumerate(rows):
+        if row[2] == action_info[2]:
+            temp_row = row
+            temp_row[1] = 'AGRC AGOL'
+            temp_row[20] = action_info[6]
+            temp_row[23] = f'AGOL category: {action_info[1]} - ' + row[23]
+            rownum = i+1
+            start = f'A{rownum}'
+            worksheet.update_values(start, [temp_row])
+            updated = True
+            updated_row = rownum
 
-        if not updated:
-            print(f'{action_info[2]} not found in stewardship doc')
+    if not updated:
+        print(f'{action_info[2]} not found in stewardship doc')
 
-        #: Update list of new additions to AGOL
-        sheet = client.open_by_key(gsheet_keys[1])
-        worksheet = sheet[0]
-        row = [action_info[0], action_info[7], f'https://utah.maps.arcgis.com/home/item.html/?id={action_info[7]}']
-        worksheet.append_table(row)
+    #: Update list of new additions to AGOL
+    sheet = client.open_by_key(gsheet_keys[1])
+    worksheet = sheet[0]
+    row = [action_info[0], action_info[7], f'https://utah.maps.arcgis.com/home/item.html/?id={action_info[7]}']
+    worksheet.append_table(row)
             
 
-    if 'csv' in method:
-        try:
-            with open(log_path, 'a', newline='\n') as logfile:
-                log_writer = csv.writer(logfile)
-                log_writer.writerow(action_info)
-        except IOError:
-            print('Log file cannot be written')
-
     return updated_row
+
+
+def log_csv(action_info, log_path):
+    '''
+    Logs an action to csv. Every layer should be logged, regardless of
+    success or failure.
+
+    action_info:    a list of info relevant to a single feature class
+    log_path:       path for logfile
+    '''
+    try:
+        with open(log_path, 'a', newline='\n') as logfile:
+            log_writer = csv.writer(logfile)
+            log_writer.writerow(action_info)
+    except IOError:
+        print('Error writing log file.')
+
 
 sde_path = s.SDE_PATH
 project_path = s.PROJECT_PATH
@@ -378,15 +381,14 @@ for entry in test:
     print('describing')
     describe = arcpy.da.Describe(os.path.join(sde_path, entry[0]))
     is_table = describe['datasetType'] == 'Table'
-    if is_table:
-        #: Log: AGOL title, operation, SGID name for stewardship doc, description, source/credit, shape type, endpoint, AGOL item ID
-        log_entry = [entry[1], 'Table: not uploaded']
-        log.append(log_entry)
-        log_action(log_entry, ['csv'], log_path)
-
-        continue
-
     try:
+        if is_table:
+
+            log_entry = [entry[1], 'Table: not uploaded']
+            log.append(log_entry)
+
+            continue
+
         print('creating sd')
         sd_path = create_service_definition(layer_info, sde_path, 
                                             temp_dir.name, project_path, 
@@ -405,7 +407,7 @@ for entry in test:
         #: Log: AGOL title, operation, SGID name for stewardship doc, description, source/credit, shape type, endpoint, AGOL item ID
         log_entry = [entry[1], entry[3], data_layer, item_info['description'], item_info['credits'], shape, endpoint, item_id]
         log.append(log_entry)
-        updated_rows[entry[0]]= log_action(log_entry, ['csv', 'gdoc'], log_path, gsheet_auth, (stewardship_sheet_key, agol_sheet_key))
+        updated_rows[entry[0]] = log_gsheets(log_entry, gsheet_auth, (stewardship_sheet_key, agol_sheet_key))
         
 
         #: Delete files from the scratch folder
@@ -415,7 +417,11 @@ for entry in test:
     except arcpy.ExecuteError:
         message = arcpy.GetMessages()
         print(message)
-        log_action([entry[1], message.replace(',', ';')], 'csv', log_path)
+        log_entry = [entry[1], message.replace(',', ';')]
+        log.append(log_entry)
+    
+    finally:
+        log_csv(log_entry, log_path)
 
 pprint.pprint(updated_rows)
 
