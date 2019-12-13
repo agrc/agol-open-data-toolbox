@@ -15,13 +15,14 @@ from re import sub
 
 
 def project_data(sgid_table, fgdb_folder, fgdb, is_table):
-    '''
-    Projects a feature class from SDE into web mercator. Non-spatial tables
-    are just copied over. 
-    sgid_table:     source table
-    fgdb_folder:    temp folders
-    fgdb:           temp fgdb
-    is_table:       boolean to flag if sgid_table is just tabular (non-spatial)
+    '''Project a feature class from SDE into web mercator. 
+    Non-spatial tables are just copied over as-is.
+
+    Parameters: 
+    sgid_table: source table
+    fgdb_folder: temp folder path
+    fgdb: temp fgdb name
+    is_table: boolean to flag if sgid_table is just tabular (non-spatial)
 
     returns: path to projected data 
     '''
@@ -52,10 +53,10 @@ def project_data(sgid_table, fgdb_folder, fgdb, is_table):
 
 
 def upload_layer(gis, service_definition, info, protect=True):
-    '''
-    Upload a service definition file to AGOL and publish it as a Hosted Feature
-    Layer, setting appropriate information.
+    '''Upload a service definition file to AGOL and publish it as a
+    Hosted Feature Layer, setting appropriate information.
 
+    Parameters:
     gis: An ArcGIS API gis item.
     service_definition: path to a service definition file created in ArcGIS Pro
     info: a dictionary of the layer's information:
@@ -69,7 +70,7 @@ def upload_layer(gis, service_definition, info, protect=True):
         folder: AGOL org's folder to move item to
     protect: if True, set AGOL flag to prevent item from being deleted
 
-    returns the published feature layer's itemid
+    returns: the published feature layer's itemid
     '''
 
     print("uploading")
@@ -112,10 +113,10 @@ def upload_layer(gis, service_definition, info, protect=True):
 
 def create_service_definition(layer_info, sde_path, temp_dir, project_path, 
                               map_name, describe):
-    '''
-    Creates a service defintion for a layer to be uploaded to AGOL from an SDE
-    using an existing ArcGIS Pro project
+    '''Create a service defintion for a layer to be uploaded to AGOL from an
+    SDE using an existing ArcGIS Pro project.
     
+    Parameters:
     layer_info: Dictionary of info about the layer to be prepped for upload
         fc_name: Fully qualified name of the SDE feature class to be uploaded 
                  (string)
@@ -227,13 +228,14 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
 
 
 def get_info(entry, generic_terms_of_use):
-    '''
-    Gets the info needed for publishing AGOL item.
-    entry:  list from CSV: [fully-qualifed FC name, fc title, credit, method]
-    generic_terms_of_use:   Standard license info for items that don't have 
-                            license info in their metadata
+    '''Get the info needed for publishing AGOL item.
     
-    returns:    dict of relevant information
+    Parameters:
+    entry: list from CSV: [fully-qualifed FC name, fc title, credit, method]
+    generic_terms_of_use: Standard license info for items that don't have 
+                          license info in their metadata
+    
+    returns: dict of relevant information
     '''
     category = entry[0].split('.')[-2].title()
     credit = entry[2] if entry[2] else 'AGRC'
@@ -291,15 +293,16 @@ def get_info(entry, generic_terms_of_use):
 
 
 def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
-    '''
-    Documents actions to stewardship doc
-    action_info:    a list of info relevant to a single feature class
-    gsheet_auth:    path to Google sheets authorization file
-    gsheet_keys:    Tuple of keys to stewardship doc [0] and agol items doc [1]
+    '''Document actions to stewardship doc.
+    
+    Parameters:
+    action_info: a list of info relevant to a single feature class
+    gsheet_auth: path to Google sheets authorization file
+    gsheet_keys: Tuple of keys to stewardship doc [0] and agol items doc [1]
 
-    returns:        row number of pre-existing data in stewardship doc; None if
-                    no pre-existing data (but it will create a new row in this 
-                    case)
+    returns: row number of pre-existing data in stewardship doc; None if
+             no pre-existing data (but it will create a new row in this 
+             case)
     '''
 
     updated_row = None
@@ -385,12 +388,12 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
 
 
 def log_csv(action_info, log_path):
-    '''
-    Logs an action to csv. Every layer should be logged, regardless of
+    '''Log an action to csv. Every layer should be logged, regardless of
     success or failure.
 
-    action_info:    a list of info relevant to a single feature class
-    log_path:       path for logfile
+    Parameters:
+    action_info: a list of info relevant to a single feature class
+    log_path: path for logfile
     '''
     try:
         with open(log_path, 'a', newline='\n') as logfile:
