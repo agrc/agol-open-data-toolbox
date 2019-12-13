@@ -11,6 +11,7 @@ import json
 import pygsheets
 import pprint
 import settings as s
+from re import sub
 
 
 def project_data(sgid_table, fgdb_folder, fgdb, is_table):
@@ -292,7 +293,7 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
             temp_row = row
             temp_row[1] = 'AGRC AGOL'
             temp_row[20] = action_info[6]
-            temp_row[23] = f'AGOL category: {action_info[1]} - ' + row[23]
+            temp_row[23] = f'AGOL category: {action_info[1]} - {row[23]}'
             rownum = i+1
             start = f'A{rownum}'
             worksheet.update_values(start, [temp_row])
@@ -301,12 +302,42 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
 
     if not updated:
         print(f'{action_info[2]} not found in stewardship doc')
+        new_row = []
+        new_row.append('')  #: Leading Note 
+        new_row.append('AGRC AGOL')  #: current source
+        new_row.append(action_info[2])
+        new_row.append('Static')  #: refresh cycle
+        new_row.append('')  #: Last update
+        new_row.append('')  #: Days from last update
+        new_row.append('')  #: Days to refresh
+        new_row.append(sub('<[^<]+?>', '', action_info[3]).strip())  #: Description
+        new_row.append(action_info[4])  #: Data Source
+        new_row.append('')  #:  Use Restrictions
+        new_row.append('')  #:  Website URL
+        new_row.append(action_info[5])  #: Data type
+        new_row.append('')  #: PEL Layer
+        new_row.append('')  #: PEL Status
+        new_row.append('')  #: Governance/Agreement
+        new_row.append('')  #: PEL Inclusion
+        new_row.append('')  #: Agency Contact Name
+        new_row.append('')  #: Agency Contact Email
+        new_row.append('')  #: SGID Coordination
+        new_row.append('')  #: Archival Schedule
+        new_row.append(action_info[6])  #: Endpoint
+        new_row.append('')  #: Tier
+        new_row.append('')  #: Webapp
+        new_row.append(f'Added by NightStocker - AGOL category: {action_info[1]}')  #: Notes
+        new_row.append('')  #: Deprecated
+
+        worksheet.insert_rows(worksheet.rows, values=new_row, inherit=True)
+
+
 
     #: Update list of new additions to AGOL
     sheet = client.open_by_key(gsheet_keys[1])
     worksheet = sheet[0]
     row = [action_info[0], action_info[7], f'https://utah.maps.arcgis.com/home/item.html/?id={action_info[7]}']
-    worksheet.append_table(row)
+    worksheet.insert_rows(worksheet.rows, values=row, inherit=True)
             
 
     return updated_row
