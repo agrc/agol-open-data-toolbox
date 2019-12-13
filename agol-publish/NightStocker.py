@@ -6,7 +6,6 @@ import sys
 import datetime
 import csv
 import tempfile
-import shutil
 import json
 import pygsheets
 import pprint
@@ -15,6 +14,16 @@ from re import sub
 
 
 def project_data(sgid_table, fgdb_folder, fgdb, is_table):
+    '''
+    Projects a feature class from SDE into web mercator. Non-spatial tables
+    are just copied over. 
+    sgid_table:     source table
+    fgdb_folder:    temp folders
+    fgdb:           temp fgdb
+    is_table:       boolean to flag if sgid_table is just tabular (non-spatial)
+
+    returns: path to projected data 
+    '''
     web_mercator = arcpy.SpatialReference(3857)
     transformation = 'NAD_1983_to_WGS_1984_5'
     
@@ -26,7 +35,7 @@ def project_data(sgid_table, fgdb_folder, fgdb, is_table):
         print(f'creating {fgdb}')
         arcpy.management.CreateFileGDB(fgdb_folder, fgdb)
 
-    #: Delete the feature class if it already exists. Don't use scratch for 
+    #: Delete the feature class if it already exists. Don't use scratch for
     #: long-term storage.
     if arcpy.Exists(output_table):
         arcpy.Delete_management(output_table)
@@ -35,7 +44,8 @@ def project_data(sgid_table, fgdb_folder, fgdb, is_table):
     if is_table:
         arcpy.management.Copy(sgid_table, output_table)
     else:
-        arcpy.management.Project(sgid_table, output_table, web_mercator, transformation)
+        arcpy.management.Project(sgid_table, output_table, web_mercator,
+                                 transformation)
 
     return output_table
 
@@ -79,7 +89,13 @@ def upload_layer(gis, service_definition, info, protect=True):
     # published_item.content_status = 'authoritative'
 
     print("updating info")
-    published_item.update(item_properties={'tags':info['tags'], 'description':info['description'], 'licenseInfo':info['terms_of_use'], 'snippet':info['summary'], 'accessInformation':info['credits']})
+    published_item.update(item_properties={
+        'tags': info['tags'],
+        'description': info['description'],
+        'licenseInfo': info['terms_of_use'],
+        'snippet': info['summary'],
+        'accessInformation': info['credits']
+        })
 
     print('folder')
     published_item.move(info['folder'])
@@ -119,7 +135,8 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
         # describe = arcpy.da.Describe(sgid_table)
         is_table = describe['datasetType'] == 'Table'
 
-        projected_table = project_data(sgid_table, temp_dir, 'tempfgdb.gdb', is_table)
+        projected_table = project_data(sgid_table, temp_dir, 'tempfgdb.gdb',
+                                       is_table)
         # projected_table = sgid_table
 
         #: Get project and map
@@ -158,7 +175,9 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
         print("staging")
         draft_path = os.path.join(temp_dir, f'{item_name}.sddraft')
         sd_path = draft_path[:-5]
-        sharing_draft = agol_map.getWebLayerSharingDraft('HOSTING_SERVER', 'FEATURE', item_name, [layer])
+        sharing_draft = agol_map.getWebLayerSharingDraft('HOSTING_SERVER',
+                                                         'FEATURE', item_name,
+                                                         [layer])
         sharing_draft.exportToSDDraft(draft_path)
         arcpy.server.StageService(draft_path, sd_path)
 
@@ -170,10 +189,20 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
 
     finally:
 
+        #: Leaving this here for future troubleshooting. Something from
+        #: .addDataFromPath() is not releasing the file handle on the temporary
+        #: fgdb until the parent python process is killed, as if it spawns
+        #: another process that doesn't end until the parent ends. This
+        #: prevents any temp folder cleanup from completing
+        #: (arcpy.Delete_management(), shutil.rmtree(), or 'with
+        #: tempfile.TemporaryDirectory:'). Deleting any and all references to
+        #: the layer and anything in the map doesn't seem to help, nor does
+        #: deleting the feature classes from the temp fgdb prior to trying to
+        #: delete the fgdb itself.
+
         if layer and not is_table:
             layer.updateConnectionProperties(os.path.join(temp_dir, 'tempfgdb.gdb'), r'c:\foo\bar.gdb', auto_update_joins_and_relates=False, validate=False)
 
-            print(layer.isBroken)
             agol_map.removeLayer(layer)
             proj.save()
 
@@ -196,7 +225,6 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
         # print(f'Deleting {tempgdb}...')
         # shutil.rmtree(tempgdb)
 
-    # return t
     return sd_path
 
 
@@ -204,6 +232,10 @@ def get_info(entry, generic_terms_of_use):
     '''
     Gets the info needed for publishing AGOL item.
     entry:  list from CSV: [fully-qualifed FC name, fc title, credit, method]
+    generic_terms_of_use:   Standard license info for items that don't have 
+                            license info in their metadata
+    
+    returns:    dict of relevant information
     '''
     category = entry[0].split('.')[-2].title()
     credit = entry[2] if entry[2] else 'AGRC'
@@ -266,6 +298,10 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
     action_info:    a list of info relevant to a single feature class
     gsheet_auth:    path to Google sheets authorization file
     gsheet_keys:    Tuple of keys to stewardship doc [0] and agol items doc [1]
+
+    returns:        row number of pre-existing data in stewardship doc; None if
+                    no pre-existing data (but it will create a new row in this 
+                    case)
     '''
 
     updated_row = None
@@ -281,10 +317,17 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
     for row in worksheet:
         rows.append(row)
     #: Row Structure:
-    #: [0 Issue, 1 Authoritative Access From, 2 SGID Data Layer, 3 Refresh Cycle (Days), 4 Last Update, 5 Days From Last Refresh, 6 Days to Refresh, 7 Description, 8 Data Source, 9 Use Restrictions, 10 Website URL, 11 Data Type, 12 PEL Layer, 13 PEL Status, 14 Governance/Agreement, 15 PEL Inclusion, 16 Agency Contact Name, 17 Agency Contact Email, 18 SGID Coordination, 19 Archival Schedule, 20 Endpoint, 21 Tier, 22 Webapp, 23 Notes, 24 Deprecated]
+    #: [0 Issue, 1 Authoritative Access From, 2 SGID Data Layer,
+    #: 3 Refresh Cycle (Days), 4 Last Update, 5 Days From Last Refresh,
+    #: 6 Days to Refresh, 7 Description, 8 Data Source, 9 Use Restrictions,
+    #: 10 Website URL, 11 Data Type, 12 PEL Layer, 13 PEL Status,
+    #: 14 Governance/Agreement, 15 PEL Inclusion, 16 Agency Contact Name,
+    #: 17 Agency Contact Email, 18 SGID Coordination, 19 Archival Schedule,
+    #: 20 Endpoint, 21 Tier, 22 Webapp, 23 Notes, 24 Deprecated]
 
     #: Action info:
-    #: [0 AGOL title, 1 operation, 2 SGID name for stewardship doc, 3 description, 4 source/credit, 5 shape type, 6 endpoint, 7 AGOL item ID]
+    #: [0 AGOL title, 1 operation, 2 SGID name for stewardship doc, 
+    #: 3 description, 4 source/credit, 5 shape type, 6 endpoint, 7 AGOL item ID]
 
     updated = False
 
@@ -362,7 +405,6 @@ def log_csv(action_info, log_path):
 sde_path = s.SDE_PATH
 project_path = s.PROJECT_PATH
 map_name = s.MAP_NAME
-test_fc_name = r'SGID10.BIOSCIENCE.Habitat_BandtailedPigeon'
 list_csv = s.LIST_CSV
 terms_of_use_path = s.TERMS_OF_USE_PATH
 log_path = s.LOG_PATH
@@ -372,11 +414,13 @@ agol_sheet_key = s.AGOL_SHEET_KEY
 
 
 temp_dir = tempfile.TemporaryDirectory(prefix='shelved_')
-# arcpy.env.scratchWorkspace = temp_dir.name
+
 
 #: Connect to AGOL
 # agol_user = sys.argv[1]
-# gis = arcgis.gis.GIS('https://www.arcgis.com', agol_user, getpass.getpass(prompt='{}\'s password: '.format(agol_user)))
+# gis = arcgis.gis.GIS('https://www.arcgis.com',
+#                      agol_user, 
+#                      getpass.getpass(prompt='{}\'s password: '.format(agol_user)))
 
 layers = []
 with open(list_csv) as list_file:
@@ -387,7 +431,6 @@ with open(list_csv) as list_file:
             layers.append(row)
 
 test = layers
-# test = [[test_fc_name, 'Bandtailed Pigeon Habitat', 'DWR', 'shelved']]
 
 #: Get metadata for whole SDE, terms of use
 metadata_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'metadata2.json')
@@ -435,10 +478,15 @@ for entry in test:
         endpoint = f'https://opendata.gis.utah.gov/datasets/{dash_name}'
         data_layer = entry[0].partition('.')[2]  #: layername for stewardship doc
 
-        #: Log: AGOL title, operation, SGID name for stewardship doc, description, source/credit, shape type, endpoint, AGOL item ID
-        log_entry = [entry[1], entry[3], data_layer, item_info['description'], item_info['credits'], shape, endpoint, item_id]
+        #: Log: AGOL title, operation, SGID name for stewardship doc, 
+        #:      description, source/credit, shape type, endpoint, AGOL item ID
+        log_entry = [entry[1], entry[3], data_layer, item_info['description'],
+                     item_info['credits'], shape, endpoint, item_id]
         log.append(log_entry)
-        updated_rows[entry[0]] = log_gsheets(log_entry, gsheet_auth, (stewardship_sheet_key, agol_sheet_key))
+        updated_rows[entry[0]] = log_gsheets(log_entry, 
+                                             gsheet_auth, 
+                                             (stewardship_sheet_key, 
+                                                agol_sheet_key))
         
 
         #: Delete files from the scratch folder
