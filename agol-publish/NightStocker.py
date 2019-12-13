@@ -9,6 +9,7 @@ import tempfile
 import json
 import pygsheets
 import pprint
+import shutil
 import settings as s
 from re import sub
 
@@ -132,12 +133,10 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
         start = datetime.datetime.now()
 
         sgid_table = os.path.join(sde_path, layer_info['fc_name'])
-        # describe = arcpy.da.Describe(sgid_table)
         is_table = describe['datasetType'] == 'Table'
 
         projected_table = project_data(sgid_table, temp_dir, 'tempfgdb.gdb',
                                        is_table)
-        # projected_table = sgid_table
 
         #: Get project and map
         proj = arcpy.mp.ArcGISProject(project_path)
@@ -166,7 +165,6 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
 
         proj.save()
 
-        # item_name = fc_name.split('.')[-1]
         item_name = layer_info['title']
         if not item_name.startswith('Utah'):
             item_name = f'Utah {item_name}'
@@ -182,7 +180,7 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
         arcpy.server.StageService(draft_path, sd_path)
 
         end = datetime.datetime.now()
-        print('time: {}'.format(end-start))
+        print(f'staging time: {end-start}')
 
     except arcpy.ExecuteError:
         raise  #: pass error up so that it can be logged and continued
@@ -412,15 +410,20 @@ gsheet_auth = s.GSHEET_AUTH
 stewardship_sheet_key = s.STEWARDSHIP_SHEET_KEY
 agol_sheet_key = s.AGOL_SHEET_KEY
 
-
-temp_dir = tempfile.TemporaryDirectory(prefix='shelved_')
+#: Create a temp dir in the user's temporary directory with the pid in the 
+#: directory name. If it exists already, delete it (shelved_ prefix should be
+#: unique enough to keep us from stomping on another program's temp dir).
+temp_dir = os.path.join(tempfile.gettempdir(), f'shelved_{os.getpid()}')
+if os.path.exists(temp_dir):
+    shutil.rmtree(temp_dir)
+os.mkdir(temp_dir)
 
 
 #: Connect to AGOL
-# agol_user = sys.argv[1]
-# gis = arcgis.gis.GIS('https://www.arcgis.com',
-#                      agol_user, 
-#                      getpass.getpass(prompt='{}\'s password: '.format(agol_user)))
+agol_user = sys.argv[1]
+gis = arcgis.gis.GIS('https://www.arcgis.com',
+                     agol_user, 
+                     getpass.getpass(prompt=f'{agol_user}\'s password: '))
 
 layers = []
 with open(list_csv) as list_file:
@@ -430,10 +433,10 @@ with open(list_csv) as list_file:
         if row[3] != 'removed': #: Just don't even add removed items to the list
             layers.append(row)
 
-test = layers
+test = layers[0:10]
 
 #: Get metadata for whole SDE, terms of use
-metadata_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'metadata2.json')
+metadata_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'metadata.json')
 metadata_lookup = None
 with open(metadata_file_path, 'r') as meta_file:
     metadata_lookup = json.loads(meta_file.read())
@@ -445,7 +448,7 @@ log = []
 updated_rows = {}
 
 for entry in test:
-    print('\n Starting {}'.format(entry[0]))
+    print(f'\n Starting {entry[0]}')
 
     layer_info = {
         'fc_name':entry[0],
@@ -465,13 +468,13 @@ for entry in test:
 
         print('creating sd')
         sd_path = create_service_definition(layer_info, sde_path, 
-                                            temp_dir.name, project_path, 
+                                            temp_dir, project_path, 
                                             map_name, describe)
 
         item_info = get_info(entry, generic_terms_of_use)
 
-        # item_id = upload_layer(gis, sd_path, item_info, protect=False)
-        item_id = 'testing'
+        item_id = upload_layer(gis, sd_path, item_info, protect=False)
+        # item_id = 'testing'
 
         shape = describe['shapeType'].lower()
         dash_name = entry[1].replace(' ', '-').lower()
@@ -503,5 +506,10 @@ for entry in test:
         log_csv(log_entry, log_path)
 
 pprint.pprint(updated_rows)
+
+try:
+    shutil.rmtree(temp_dir)
+except PermissionError:
+    print(f'Could not remove temporary directory {temp_dir}. Please delete manually.')
 
 
