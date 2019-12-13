@@ -1,17 +1,19 @@
-import arcpy
-import arcgis
-import getpass
-import os
-import sys
-import datetime
 import csv
-import tempfile
+import datetime
+import getpass
 import json
-import pygsheets
+import os
 import pprint
+import pygsheets
 import shutil
-import settings as s
+import sys
+import tempfile
 from re import sub
+
+import arcgis
+import arcpy
+
+import settings as s
 
 
 def project_data(sgid_table, fgdb_folder, fgdb, is_table):
