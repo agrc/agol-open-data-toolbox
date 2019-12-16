@@ -438,8 +438,6 @@ with open(list_csv) as list_file:
         if row[3] != 'removed': #: Just don't even add removed items to the list
             layers.append(row)
 
-test = layers[0:10]
-
 #: Get metadata for whole SDE, terms of use
 metadata_file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'metadata.json')
 metadata_lookup = None
@@ -452,7 +450,7 @@ with open(terms_of_use_path) as terms_file:
 log = []
 updated_rows = {}
 
-for feature_class_name, item_title, source, action in test:
+for feature_class_name, item_title, source, action in layers:
     print(f'\n Starting {feature_class_name}')
 
     layer_info = {
@@ -479,8 +477,7 @@ for feature_class_name, item_title, source, action in test:
         info_list = [feature_class_name, item_title, source, action]
         item_info = get_info(info_list, generic_terms_of_use)
 
-        item_id = upload_layer(gis, sd_path, item_info, protect=False)
-        # item_id = 'testing'
+        item_id = upload_layer(gis, sd_path, item_info, protect=True)
 
         shape = describe['shapeType'].lower()
         dash_name = item_title.replace(' ', '-').lower()
