@@ -452,21 +452,21 @@ with open(terms_of_use_path) as terms_file:
 log = []
 updated_rows = {}
 
-for entry in test:
-    print(f'\n Starting {entry[0]}')
+for feature_class_name, item_title, source, action in test:
+    print(f'\n Starting {feature_class_name}')
 
     layer_info = {
-        'fc_name':entry[0],
-        'title':entry[1]
+        'fc_name':feature_class_name,
+        'title':item_title
     }
 
     print('describing')
-    describe = arcpy.da.Describe(os.path.join(sde_path, entry[0]))
+    describe = arcpy.da.Describe(os.path.join(sde_path, feature_class_name))
     is_table = describe['datasetType'] == 'Table'
     try:
         if is_table:
 
-            log_entry = [entry[1], 'Table: not uploaded']
+            log_entry = [item_title, 'Table: not uploaded']
             log.append(log_entry)
 
             continue
@@ -476,25 +476,26 @@ for entry in test:
                                             temp_dir, project_path, 
                                             map_name, describe)
 
-        item_info = get_info(entry, generic_terms_of_use)
+        info_list = [feature_class_name, item_title, source, action]
+        item_info = get_info(info_list, generic_terms_of_use)
 
         item_id = upload_layer(gis, sd_path, item_info, protect=False)
         # item_id = 'testing'
 
         shape = describe['shapeType'].lower()
-        dash_name = entry[1].replace(' ', '-').lower()
+        dash_name = item_title.replace(' ', '-').lower()
         endpoint = f'https://opendata.gis.utah.gov/datasets/{dash_name}'
-        data_layer = entry[0].partition('.')[2]  #: layername for stewardship doc
+        data_layer = feature_class_name.partition('.')[2]  #: layername for stewardship doc
 
         #: Log: AGOL title, operation, SGID name for stewardship doc, 
         #:      description, source/credit, shape type, endpoint, AGOL item ID
-        log_entry = [entry[1], entry[3], data_layer, item_info['description'],
+        log_entry = [item_title, action, data_layer, item_info['description'],
                      item_info['credits'], shape, endpoint, item_id]
         log.append(log_entry)
-        updated_rows[entry[0]] = log_gsheets(log_entry, 
-                                             gsheet_auth, 
-                                             (stewardship_sheet_key, 
-                                                agol_sheet_key))
+        updated_rows[feature_class_name] = log_gsheets(log_entry, 
+                                                       gsheet_auth, 
+                                                       (stewardship_sheet_key, 
+                                                            agol_sheet_key))
         
 
         #: Delete files from the scratch folder
@@ -504,7 +505,7 @@ for entry in test:
     except arcpy.ExecuteError:
         message = arcpy.GetMessages()
         print(message)
-        log_entry = [entry[1], message.replace(',', ';')]
+        log_entry = [item_title, message.replace(',', ';')]
         log.append(log_entry)
     
     finally:
