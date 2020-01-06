@@ -8,6 +8,7 @@ import pygsheets
 import shutil
 import sys
 import tempfile
+import traceback
 from re import sub
 
 import arcgis
@@ -433,7 +434,7 @@ gis = arcgis.gis.GIS('https://www.arcgis.com',
 layers = []
 with open(list_csv) as list_file:
     reader = csv.reader(list_file)
-    next(reader)
+    # next(reader)
     for row in reader:
         if row[3] != 'removed': #: Just don't even add removed items to the list
             layers.append(row)
@@ -462,11 +463,30 @@ for feature_class_name, item_title, source, action in layers:
     describe = arcpy.da.Describe(os.path.join(sde_path, feature_class_name))
     is_table = describe['datasetType'] == 'Table'
     try:
+        #: Check if it's a table, skip if true
         if is_table:
 
             log_entry = [item_title, 'Table: not uploaded']
+            print(f'{feature_class_name} is a table; not uploading')
             log.append(log_entry)
 
+            continue
+
+        #: Check if layer already exists in AGOL, skip if true
+        item_name = item_title  #: prepend Utah if needed to match uploaded item title
+        if not item_name.startswith('Utah'):
+            item_name = f'Utah {item_name}'
+        existing = gis.content.search(item_name, item_type='Feature Layer')
+        skip = False
+        if existing:  #: ESRI's content.search is fuzzy, need to check against each item.title
+            for item in existing:
+                if item.title == item_name:
+                    skip = True
+                    print(f'new title: {item_name}')
+                    log_entry = [item_title, f'{feature_class_name} already published in AGOL as {item_name}: {item.itemid}']
+                    print(f'{feature_class_name} already published in AGOL as {item.title}: {item.itemid}')
+                    log.append(log_entry)
+        if skip:
             continue
 
         print('creating sd')
@@ -505,10 +525,15 @@ for feature_class_name, item_title, source, action in layers:
         log_entry = [item_title, message.replace(',', ';')]
         log.append(log_entry)
     
+    except RuntimeError as error:
+        log_entry = [item_title, str(error)]
+        print(f'Error with {item_title}:')
+        traceback.print_exc()
+
     finally:
         log_csv(log_entry, log_path)
 
-pprint.pprint(updated_rows)
+# pprint.pprint(updated_rows)
 
 try:
     shutil.rmtree(temp_dir)
