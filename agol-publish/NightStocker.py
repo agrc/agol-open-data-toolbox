@@ -157,6 +157,7 @@ def create_service_definition(layer_info, sde_path, temp_dir, project_path,
 
         # : Add layer
         layer = agol_map.addDataFromPath(projected_table)
+        layer.name = layer_info['fc_name'].split('.')[-1]
 
         #: Verify map projection
         cim = agol_map.getDefinition('V2')
@@ -276,7 +277,7 @@ def get_info(entry, generic_terms_of_use):
         group = f'Utah SGID {category}'
         tags.append('static')
         tags.append(category)
-        folder = f'Utah SGID {category}'
+        folder = category
         description = f'{static_disclaimer} <p> </p> <p>{description}</p>'
     else:
         raise ValueError(f'Unknown shelving category: {entry[3]}')
@@ -496,7 +497,6 @@ for feature_class_name, item_title, source, action in layers:
 
         info_list = [feature_class_name, item_title, source, action]
         item_info = get_info(info_list, generic_terms_of_use)
-
         item_id = upload_layer(gis, sd_path, item_info, protect=True)
 
         shape = describe['shapeType'].lower()
