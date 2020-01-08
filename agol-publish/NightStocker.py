@@ -325,10 +325,10 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
     #: [0 Issue, 1 Authoritative Access From, 2 SGID Data Layer,
     #: 3 Refresh Cycle (Days), 4 Last Update, 5 Days From Last Refresh,
     #: 6 Days to Refresh, 7 Description, 8 Data Source, 9 Use Restrictions,
-    #: 10 Website URL, 11 Data Type, 12 PEL Layer, 13 PEL Status,
-    #: 14 Governance/Agreement, 15 PEL Inclusion, 16 Agency Contact Name,
-    #: 17 Agency Contact Email, 18 SGID Coordination, 19 Archival Schedule,
-    #: 20 Endpoint, 21 Tier, 22 Webapp, 23 Notes, 24 Deprecated]
+    #: 10 Anchor, 11 Website URL, 12 Data Type, 13 PEL Layer, 14 PEL Status,
+    #: 15 Governance/Agreement, 16 PEL Inclusion, 17 Agency Contact Name,
+    #: 18 Agency Contact Email, 19 SGID Coordination, 20 Archival Schedule,
+    #: 21 Endpoint, 22 Tier, 23 Webapp, 24 Notes, 25 Deprecated]
 
     #: Action info:
     #: [0 AGOL title, 1 operation, 2 SGID name for stewardship doc, 
@@ -340,8 +340,8 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
         if row[2] == action_info[2]:
             temp_row = row
             temp_row[1] = 'AGRC AGOL'
-            temp_row[20] = action_info[6]
-            temp_row[23] = f'AGOL category: {action_info[1]} - {row[23]}'
+            temp_row[21] = action_info[6]
+            temp_row[24] = f'AGOL category: {action_info[1]} - {row[24]}'
             rownum = i+1
             start = f'A{rownum}'
             worksheet.update_values(start, [temp_row])
@@ -362,6 +362,7 @@ def log_gsheets(action_info, gsheet_auth=None, gsheet_keys=None):
         new_row.append(action_info[4])  #: Data Source
         new_row.append('')  #:  Use Restrictions
         new_row.append('')  #:  Website URL
+        new_row.append('')  #: Anchor note
         new_row.append(action_info[5])  #: Data type
         new_row.append('')  #: PEL Layer
         new_row.append('')  #: PEL Status
