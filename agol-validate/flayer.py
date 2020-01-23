@@ -315,18 +315,37 @@ class org:
             orig_tags = [t.strip() for t in item.tags]
 
             new_tags = []
+
+            #: Evaluate existing tags: upercase SGID and AGRC, fix/keep Utah
+            #: if not in title, remove if in list of bad tags, remove if in
+            #: title
             for orig_tag in orig_tags:
+
+                #: Check if the tag is in the title (checking orig_tag instead
+                #: of cleaned_tag to avoid weird false positives in multi-word
+                #: tags catching the middle of a title- ie, 'Cycle Net' would
+                #: match the title 'Bicycle Network'. Probably not super
+                #: common, but oh well.)
+                #: These combine several boolean checks into a single variable
+                #: to be checked later.
 
                 #: single-word tag in title
                 single_word_tag_in_title = False
                 if orig_tag in item.title.split():
                     single_word_tag_in_title = True
-                #: mutli-word tag in title
+                #: multi-word tag in title
                 multi_word_tag_in_title = False
                 if ' ' in orig_tag and orig_tag in item.title:
                     multi_word_tag_in_title = True
 
+                #: operate on lower case to fix any weird mis-cased tags
                 cleaned_tag = orig_tag.lower()
+
+                #: Run checks on the tags. A check that modifies the tag should
+                #: append it to new_tags. A check that removes unwanted tags
+                #: should just pass. If a tag passes all the checks, it gets
+                #: added to new_tags (the else clause).
+
                 #: Upercases: SGID and AGRC
                 if cleaned_tag == 'sgid':
                     new_tags.append('SGID')
@@ -338,8 +357,10 @@ class org:
                 #: Don't add to new_tags if it should be deleted
                 elif cleaned_tag in ['.sd', 'service definition']:
                     pass
-                #: Finally, keep the tag unless it's in the title
-                elif not single_word_tag_in_title and not multi_word_tag_in_title:
+                #: Don't add if it's in the title
+                elif single_word_tag_in_title and multi_word_tag_in_title:
+                    pass
+                else:
                     new_tags.append(orig_tag)
             
             #: Add the category tag
@@ -444,3 +465,5 @@ if __name__ == '__main__':
     # agrc.tag_fixer()
     agrc.duplicate_tags(dupe_tags_out)
 
+#: Questions:
+#: Tags: All title ('Transportation Of Stuff')? All lower? Flag for manual review?
