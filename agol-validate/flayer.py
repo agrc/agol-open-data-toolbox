@@ -2,15 +2,14 @@
 flayer.py: Lay bare all our feature layers and fix any problems
 
 For each feature layer, check:
-    > Tags
-    > Group & Folder (?)
-    > Delete Protection
+    > Tags for malformed spacing, standard AGRC/SGID tags
+    > Group & Folder (?) to match source data category
+    > Delete Protection enabled
     > Downloads enabled
     > Title against metatable
+    > Metadata against SGID (Waiting until 2.5's arcpy metadata tools?)
 
 '''
-
-
 
 import arcgis
 
@@ -117,7 +116,7 @@ class org:
                        getpass.getpass("{}'s password: ".format(user_name)))
 
         #: Get all the Feature Service item objects in the user's folders
-        user_item = self.gis.users.get(self.user_name)
+        user_item = self.gis.users.me
 
         #: Build list of folders. 'None' gives us the root folder.
         print('Getting {}\'s folders...'.format(self.user_name))
@@ -133,11 +132,17 @@ class org:
                     self.feature_service_items.append(item)
 
 
-    def get_tags(self, method='owner', out_path=None):
+    def get_users_tags_and_items(self, method='owner', out_path=None):
         '''
-        Creates a dictionary of all the tags associated with Feature Services 
-        owned by user_name and the Feature Services that are tagged with them,
-        {tag:[item1, item2, ...]}
+        Populates dictionary of all the tags associated with Feature Services 
+        and the Feature Services that are tagged with them, like thus:
+        {tag:[item1, item2, ...]}.
+
+        method: Defines what items are evaluated. 'owner' queries for all
+                Feature Layer items owned by the current owner. 'folder' adds 
+                all Feature Layer items in folders owned by the current owner.
+                These may give different results if other users' data is in 
+                the user's folder. 
         '''
 
         if method == 'owner':
@@ -343,7 +348,7 @@ class org:
         '''
 
         print('Creating item information...')
-        user_item = self.gis.users.get(self.user_name)
+        user_item = self.gis.users.me
 
         #: Build list of folders. 'None' gives us the root folder.
         folders = [None]
@@ -381,7 +386,7 @@ if __name__ == '__main__':
     tags_out = r'c:\temp\agol_tags.xls'
     tags_items_out = r'c:\temp\agol_tags_items.csv'
     agrc = org('https://www.arcgis.com', 'UtahAGRC')
-    # agrc.get_tags('folder', tags_out)
+    # agrc.get_users_tags_and_items('folder', tags_out)
     # agrc.bad_spaces(spaces_out)
     agrc.get_feature_services_info(items_out)
     # agrc.tag_cloud()
