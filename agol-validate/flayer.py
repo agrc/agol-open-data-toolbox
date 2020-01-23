@@ -138,11 +138,14 @@ class org:
         and the Feature Services that are tagged with them, like thus:
         {tag:[item1, item2, ...]}.
 
-        method: Defines what items are evaluated. 'owner' queries for all
-                Feature Layer items owned by the current owner. 'folder' adds 
-                all Feature Layer items in folders owned by the current owner.
-                These may give different results if other users' data is in 
-                the user's folder. 
+        method:     Defines what items are evaluated. 'owner' queries for all
+                    Feature Layer items owned by the current owner. 'folder' adds 
+                    all Feature Layer items in folders owned by the current owner.
+                    These may give different results if other users' data is in 
+                    the user's folder. 
+
+        out_path:   if specified, the tag dictionary is sorted by tag name and 
+                    then written out as a csv to this path.
         '''
 
         if method == 'owner':
@@ -182,7 +185,9 @@ class org:
 
     def tag_cloud(self, out_path=None):
         '''
-        Create a list of all tags in self.feature_services
+        Create a list of all tags in all the items in the user's folders
+        (self.feature_services). If out_path is specified, the tags are sorted,
+        added to a pandas series, and then written out as an .xls to out_path.
         '''
 
         tags = []
@@ -198,25 +203,31 @@ class org:
             tag_series.to_excel(out_path)
 
 
-    def bad_spaces(self, out_path=None):
+    def get_tags_with_leading_spaces(self, out_path=None):
         '''
-        Create a dictionary of items with spaced tags and a list of all their
-        spaced tags {item:[bad_tag1, bad_tag2, ...]} and write it as a csv
-        to out_path.
+        Create a dictionary of items in self.tags_and_items with tags that have
+        leading spaces and a list of all their spaced tags:
+        {item:[bad_tag1, bad_tag2, ...]}. If out_path is specified, write the
+        list as a csv.
         '''
 
-        print('Saving items with spaced tags to {}...'.format(out_path))
-        space_tagged = {}
+        #: Populate the dictionary of tags and associated items if it is not
+        #: already populated.
+        if not self.tags_and_items:
+            get_users_tags_and_items()
+
+        print('Saving items with leading-space tags to {}...'.format(out_path))
+        leading_space_tagged = {}
         for tag in self.tags_and_items:
             if tag.startswith(' '):
                 for item_name in self.tags_and_items[tag]:
-                    if item_name not in space_tagged:
-                        space_tagged[item_name] = [tag]
+                    if item_name not in leading_space_tagged:
+                        leading_space_tagged[item_name] = [tag]
                     else:
-                        space_tagged[item_name].append(tag)
+                        leading_space_tagged[item_name].append(tag)
 
         if out_path:
-            dict_writer(space_tagged, out_path)
+            dict_writer(leading_space_tagged, out_path)
 
 
     def duplicate_tags(self, out_path=None):
@@ -387,7 +398,7 @@ if __name__ == '__main__':
     tags_items_out = r'c:\temp\agol_tags_items.csv'
     agrc = org('https://www.arcgis.com', 'UtahAGRC')
     # agrc.get_users_tags_and_items('folder', tags_out)
-    # agrc.bad_spaces(spaces_out)
+    # agrc.get_tags_with_leading_spaces(spaces_out)
     agrc.get_feature_services_info(items_out)
     # agrc.tag_cloud()
     # agrc.tag_fixer()
