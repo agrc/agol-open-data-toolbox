@@ -358,7 +358,7 @@ class org:
                 elif cleaned_tag in ['.sd', 'service definition']:
                     pass
                 #: Don't add if it's in the title
-                elif single_word_tag_in_title and multi_word_tag_in_title:
+                elif single_word_tag_in_title or multi_word_tag_in_title:
                     pass
                 else:
                     new_tags.append(orig_tag)
