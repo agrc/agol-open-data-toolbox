@@ -1,7 +1,7 @@
 '''
 flayer.py: Lay bare all our feature layers and fix any problems
 
-For each feature layer, check:
+For each hosted feature layer, check:
     > Tags for malformed spacing, standard AGRC/SGID tags
     > Group & Folder (?) to match source data category
     > Delete Protection enabled
@@ -9,6 +9,8 @@ For each feature layer, check:
     > Title against metatable
     > Metadata against SGID (Waiting until 2.5's arcpy metadata tools?)
 
+Also, check the following:
+    > Duplicate tags
 '''
 
 import arcgis
@@ -132,11 +134,11 @@ class org:
                     self.feature_service_items.append(item)
 
 
-    def get_users_tags_and_items(self, method='owner', out_path=None):
+    def get_users_tags_and_item_names(self, method='owner', out_path=None):
         '''
         Populates dictionary of all the tags associated with Feature Services 
-        and the Feature Services that are tagged with them, like thus:
-        {tag:[item1, item2, ...]}.
+        and the name of the Feature Services that are tagged with them, like
+        thus: {tag:[item1, item2, ...]}.
 
         method:     Defines what items are evaluated. 'owner' queries for all
                     Feature Layer items owned by the current owner. 'folder' adds 
@@ -214,7 +216,7 @@ class org:
         #: Populate the dictionary of tags and associated items if it is not
         #: already populated.
         if not self.tags_and_items:
-            get_users_tags_and_items()
+            self.get_users_tags_and_item_names()
 
         print('Saving items with leading-space tags to {}...'.format(out_path))
         leading_space_tagged = {}
@@ -232,29 +234,41 @@ class org:
 
     def duplicate_tags(self, out_path=None):
 
+        #: Populate the dictionary of tags and associated items if it is not
+        #: already populated.
+        if not self.tags_and_items:
+            self.get_users_tags_and_item_names()
+
         #: Dictionary of lower-cased tag and all other tags that match when 
         #: lower-cased
-        dupe_tags = {}
+        tags_by_check_tag = {}
 
-        #: List of all lower-cased tags
-        cleaned_tags = []
-
-        #: 
+        #: For each tag, create a lowercased check_tag version. If check_tag
+        #: hasn't been seen before, add it to dictionary of seen tags with value
+        #: of 1-element list of the actual tag. If it has been seen (check_tag
+        #: is in the dictionary keys), add this new actual tag to the list of
+        #: tags associated with the check_tag key. Afterwards, any value (list
+        #: of tags) in dictionary with len > 1 indicates functionally duplicate
+        #: tags.
         for tag in self.tags_and_items:
-            cleaned_tag = tag.lower()
-            if cleaned_tag not in cleaned_tags:
-                cleaned_tags.append(cleaned_tag)
+            check_tag = tag.lower()
 
-        for cleaned_tag in cleaned_tags:
-            for search_tag in self.tags_and_items:
-                if cleaned_tag == search_tag.lower():
-                    if cleaned_tag in dupe_tags:
-                        dupe_tags[cleaned_tag].append(search_tag)
-                    else:
-                        dupe_tags[cleaned_tag] = [search_tag]
+            related_items = [item 
+                                for item 
+                                in self.tags_and_items[tag]]
+            if check_tag in tags_by_check_tag:
+                tags_by_check_tag[check_tag].append(related_items)
+            else:
+                tags_by_check_tag[check_tag] = [related_items]
+
+            dupe_dict = {check_tag : tag_list
+                            for check_tag, tag_list
+                            in tags_by_check_tag.items()
+                            if len(tag_list) > 1}
+
 
         if out_path:
-            dict_writer(dupe_tags, out_path)
+            dict_writer(dupe_dict, out_path)
 
 
     def tag_fixer(self):
@@ -396,10 +410,12 @@ if __name__ == '__main__':
     items_out = r'c:\temp\agol_layers_postshelf.xls'
     tags_out = r'c:\temp\agol_tags.xls'
     tags_items_out = r'c:\temp\agol_tags_items.csv'
+    dupe_tags_out = r'c:\temp\agol_tags_dupes.csv'
     agrc = org('https://www.arcgis.com', 'UtahAGRC')
-    # agrc.get_users_tags_and_items('folder', tags_out)
+    # agrc.get_users_tags_and_item_names('folder', tags_out)
     # agrc.get_tags_with_leading_spaces(spaces_out)
-    agrc.get_feature_services_info(items_out)
+    # agrc.get_feature_services_info(items_out)
     # agrc.tag_cloud()
     # agrc.tag_fixer()
+    agrc.duplicate_tags(dupe_tags_out)
 
