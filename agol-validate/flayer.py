@@ -290,7 +290,6 @@ class org:
                                 in tags_by_check_tag.items()
                                 if len(tag_list) > 1}
 
-
         if out_path:
             header_row = [f'tag_{i}' for i in range(0, longest_tag_list)]
             header_row.insert(0, 'lowercase_check_tag')
@@ -319,13 +318,13 @@ class org:
             for orig_tag in orig_tags:
 
                 #: single-word tag in title
-                single_word_tag_not_in_title = True
+                single_word_tag_in_title = False
                 if orig_tag in item.title.split():
-                    single_word_tag_not_in_title = False
+                    single_word_tag_in_title = True
                 #: mutli-word tag in title
-                multi_word_tag_not_in_title = True
+                multi_word_tag_in_title = False
                 if ' ' in orig_tag and orig_tag in item.title:
-                    multi_word_tag_not_in_title = False
+                    multi_word_tag_in_title = True
 
                 cleaned_tag = orig_tag.lower()
                 #: Upercases: SGID and AGRC
@@ -340,7 +339,7 @@ class org:
                 elif cleaned_tag in ['.sd', 'service definition']:
                     pass
                 #: Finally, keep the tag unless it's in the title
-                elif single_word_tag_not_in_title and multi_word_tag_not_in_title:
+                elif not single_word_tag_in_title and not multi_word_tag_in_title:
                     new_tags.append(orig_tag)
             
             #: Add the category tag
