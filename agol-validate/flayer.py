@@ -365,6 +365,7 @@ class org:
             
             #: Add the category tag
             groups = []
+            #: Wrap in try/except because some groups fail for some odd reason
             try:
                 for g in item.shared_with['groups']:
                     groups.append(g.title)
@@ -373,7 +374,7 @@ class org:
 
             for group in groups:
                 if 'Utah SGID' in group:
-                    category = group.split()[-1]
+                    category = group.split('Utah SGID')[-1]
                     #: If there's already a lowercase category tag, replace it
                     if category.lower() in new_tags:
                         new_tags.remove(category.lower())
