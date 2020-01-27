@@ -112,6 +112,9 @@ class org:
     #: the value is a list of duplicate tags when ignoring case.
     duplicate_tags = {}
 
+    #: A list of tags that should be uppercased, saved as lower to check against
+    uppercased_tags = ['2g', '3g', '4g', 'agrc', 'aog', 'at&t', 'blm', 'brat', 'caf', 'cdl', 'daq', 'dfcm', 'dfirm', 'dwq', 'e911', 'ems', 'fae', 'fcc', 'fema', 'gcdb', 'gis', 'gnis', 'hava', 'huc', 'lir', 'lrs', 'lte', 'luca', 'mrrc', 'nca', 'ng911', 'nox', 'npsbn', 'ntia', 'nwi', 'plss', 'pm10', 'psap', 'sbdc', 'sbi', 'sgid', 'sitla', 'sligp', 'trax', 'uca', 'udot', 'ugs', 'uhp', 'uic', 'usdw', 'usfs', 'usfws', 'usps', 'ustc', 'ut', 'uta', 'vcp', 'vista', 'voc']
+
 
     def __init__(self, path, user_name):
         logging.info('==========')
@@ -347,10 +350,12 @@ class org:
                 #: added to new_tags (the else clause).
 
                 #: Upercases: SGID and AGRC
-                if cleaned_tag == 'sgid':
-                    new_tags.append('SGID')
-                elif cleaned_tag == 'agrc':
-                    new_tags.append('AGRC')
+                # if cleaned_tag == 'sgid':
+                #     new_tags.append('SGID')
+                # elif cleaned_tag == 'agrc':
+                #     new_tags.append('AGRC')
+                if cleaned_tag in self.uppercased_tags:
+                    new_tags.append(cleaned_tag.upper())
                 #: Fix/keep 'Utah' if it's not in the title
                 elif cleaned_tag == 'utah' and orig_tag not in item.title.split():
                     new_tags.append('Utah')
@@ -455,16 +460,17 @@ if __name__ == '__main__':
 
     spaces_out = r'c:\temp\agol_spaced.csv'
     items_out = r'c:\temp\agol_layers_postshelf.xls'
-    tags_out = r'c:\temp\agol_tags.xls'
-    tags_items_out = r'c:\temp\agol_tags_items.csv'
+    tags_out = r'c:\temp\agol_tags.csv'
+    tag_cloud_out = r'c:\temp\agol_tag_cloud.xls'
+    tags_items_out = r'c:\temp\agol_tags_items_2020-01-27.csv'
     dupe_tags_out = r'c:\temp\agol_tags_dupes.csv'
     agrc = org('https://www.arcgis.com', 'UtahAGRC')
-    # agrc.get_users_tags_and_item_names('folder', tags_out)
+    agrc.get_users_tags_and_item_names('folder', tags_out)
     # agrc.get_tags_with_leading_spaces(spaces_out)
-    # agrc.get_feature_services_info(items_out)
-    # agrc.tag_cloud()
+    agrc.get_feature_services_info(items_out)
+    # agrc.tag_cloud(tag_cloud_out)
     # agrc.tag_fixer()
-    agrc.duplicate_tags(dupe_tags_out)
+    # agrc.duplicate_tags(dupe_tags_out)
 
 #: Questions:
 #: Tags: All title ('Transportation Of Stuff')? All lower? Flag for manual review?
