@@ -415,7 +415,7 @@ class org:
 
             for group in groups:
                 if 'Utah SGID' in group:
-                    category = group.split('Utah SGID')[-1]
+                    category = group.split('Utah SGID ')[-1]
                     #: If there's already a lowercase category tag, replace it
                     if category.lower() in new_tags:
                         new_tags.remove(category.lower())
