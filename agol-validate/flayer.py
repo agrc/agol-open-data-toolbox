@@ -225,17 +225,19 @@ class org:
         #: For sanity's sake (this is in sigmund, after all), sort by name
         self.sorted_tags = sorted(self.tags_and_items)
 
-        #: Somehow gets the number of items for each tag...?
-        #: Used to work when tags_and_items created list of item.title instead
-        #: of list of item  
-        #: TODO: figure this out
-        # length_dict = {}
-        # for key in self.tags_and_items:
-        #     length_dict[key] = [len(self.tags_and_items[key])]
-        #     length_dict[key].extend(sorted(self.tags_and_items[key]))
+        #: Create a dictionary based on tags returning a list of the number of
+        #: items referenced by that tag and their titles for csv output
+        #: {tag: [3, foo, bar, baz], ...}
+        length_dict = {}
+        for tag in self.tags_and_items:
+            item_titles = [item.title for item in self.tags_and_items[tag]]
+            #: First item in the list is the number of items with that tag
+            length_dict[tag] = [len(item_titles)]
+            #: Then the item titles are append
+            length_dict[tag].extend(sorted(item_titles))
 
-        # if out_path:
-        #     dict_writer(length_dict, out_path)
+        if out_path:
+            dict_writer(length_dict, out_path)
 
 
     def tag_cloud(self, out_path=None):
@@ -504,11 +506,11 @@ if __name__ == '__main__':
     tags_items_out = r'c:\temp\agol_tags_items_2020-01-27.csv'
     dupe_tags_out = r'c:\temp\agol_tags_dupes.csv'
     agrc = org('https://www.arcgis.com', 'UtahAGRC')
-    # agrc.get_users_tags_and_item_names('folder', tags_out)
+    agrc.get_users_tags_and_item_names('folder', tags_out)
     # agrc.get_tags_with_leading_spaces(spaces_out)
     # agrc.get_feature_services_info(items_out)
     # agrc.tag_cloud(tag_cloud_out)
-    agrc.tag_fixer()
+    # agrc.tag_fixer()
     # agrc.duplicate_tags(dupe_tags_out)
 
 #: Questions:
