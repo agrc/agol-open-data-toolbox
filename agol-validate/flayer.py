@@ -243,7 +243,7 @@ class org:
         if out_path:
             header_row = ['tag', 'count']
             header_row.extend([f'tag_{i}' for i in range(0, longest_tag_list)])
-            dict_writer(length_dict, out_path)
+            dict_writer(length_dict, out_path, header_row)
 
 
     def tag_cloud(self, out_path=None):
@@ -343,7 +343,7 @@ class org:
 
         if out_path:
             header_row = ['lowercase_check_tag']
-            header_row.append([f'tag_{i}' for i in range(0, longest_tag_list)])
+            header_row.extend([f'tag_{i}' for i in range(0, longest_tag_list)])
             dict_writer(self.duplicate_tags, out_path, header_row)
 
 
