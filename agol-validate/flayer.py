@@ -229,14 +229,20 @@ class org:
         #: items referenced by that tag and their titles for csv output
         #: {tag: [3, foo, bar, baz], ...}
         length_dict = {}
+        longest_tag_list = 0  #: For creating tag indices in csv header
         for tag in self.tags_and_items:
             item_titles = [item.title for item in self.tags_and_items[tag]]
             #: First item in the list is the number of items with that tag
             length_dict[tag] = [len(item_titles)]
-            #: Then the item titles are append
+            #: Update longest_tag_list if needed
+            if len(item_titles) > longest_tag_list:
+                longest_tag_list = len(item_titles)
+            #: Append the list of titles to the list
             length_dict[tag].extend(sorted(item_titles))
 
         if out_path:
+            header_row = ['tag', 'count']
+            header_row.extend([f'tag_{i}' for i in range(0, longest_tag_list)])
             dict_writer(length_dict, out_path)
 
 
@@ -336,8 +342,8 @@ class org:
                                 if len(tag_list) > 1}
 
         if out_path:
-            header_row = [f'tag_{i}' for i in range(0, longest_tag_list)]
-            header_row.insert(0, 'lowercase_check_tag')
+            header_row = ['lowercase_check_tag']
+            header_row.append([f'tag_{i}' for i in range(0, longest_tag_list)])
             dict_writer(self.duplicate_tags, out_path, header_row)
 
 
@@ -511,7 +517,7 @@ if __name__ == '__main__':
     # agrc.get_feature_services_info(items_out)
     # agrc.tag_cloud(tag_cloud_out)
     # agrc.tag_fixer()
-    # agrc.duplicate_tags(dupe_tags_out)
+    agrc.get_duplicate_tags(dupe_tags_out)
 
 #: Questions:
 #: Tags: All title ('Transportation Of Stuff')? All lower? Flag for manual review?
