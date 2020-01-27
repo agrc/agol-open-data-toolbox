@@ -152,6 +152,9 @@ class org:
     #: Articles that should be left lowercase.
     articles = ['a', 'the', 'of', 'is', 'in']
 
+    #: Tags that should be deleted
+    tags_to_delete = ['.sd', 'service definition']
+
 
     def __init__(self, path, user_name):
         logging.info('==========')
@@ -386,12 +389,11 @@ class org:
                 #: should just pass. If a tag passes all the checks, it gets
                 #: properly cased and added to new_tags (the else clause).
 
-
                 #: Fix/keep 'Utah' if it's not in the title
                 if cleaned_tag == 'utah' and orig_tag not in item.title.split():
                     new_tags.append('Utah')
                 #: Don't add to new_tags if it should be deleted
-                elif cleaned_tag in ['.sd', 'service definition']:
+                elif cleaned_tag in self.tags_to_delete:
                     pass
                 #: Don't add if it's in the title
                 elif single_word_tag_in_title or multi_word_tag_in_title:
