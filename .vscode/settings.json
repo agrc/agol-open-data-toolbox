@@ -1,5 +1,5 @@
 {
-  "python.pythonPath": "C:\\Users\\jdadams\\AppData\\Local\\Programs\\ArcGIS\\Pro\\bin\\Python\\envs\\arcpy\\python.exe",
+  "python.pythonPath": "/usr/local/Caskroom/miniconda/base/envs/update-links/bin/python",
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": true,
   "python.linting.flake8Enabled": false,
