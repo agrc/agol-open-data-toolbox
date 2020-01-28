@@ -518,6 +518,3 @@ if __name__ == '__main__':
     # agrc.tag_cloud(tag_cloud_out)
     # agrc.tag_fixer()
     agrc.get_duplicate_tags(dupe_tags_out)
-
-#: Questions:
-#: Tags: All title ('Transportation Of Stuff')? All lower? Flag for manual review?
